@@ -140,10 +140,6 @@
     int num = atoi(str.substr(1).c_str());
     string_buf_+= num; 
   }
-  \\ {
-    adjustStr(); 
-    string_buf_ += '\';
-  }
   \\\" {
     adjustStr(); 
     string_buf_ += '\"';
