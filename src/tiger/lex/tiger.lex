@@ -182,7 +182,10 @@
     adjustStr();
     comment_level_++;
   }
-  .|\n {
+  . {
+    adjustStr();
+  }
+  \n {
     adjustStr();
   }
 }
