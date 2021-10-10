@@ -148,7 +148,7 @@
     adjustStr();
     string_buf_ += "\\";
   }
-  \\[ \n\t\f]+\\ {
+  \\[ \n\t]+\\ {
     adjustStr();
   }
   \\\^[A-Z] {
