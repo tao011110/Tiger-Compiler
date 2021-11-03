@@ -1,10 +1,13 @@
 #include "tiger/absyn/absyn.h"
 #include "tiger/semant/semant.h"
 #include <iostream>
+#include <vector>
 
 namespace absyn {
   
 int isInLoop = 0;
+
+std::vector<sym::Symbol*> funcVec;
 
 void AbsynTree::SemAnalyze(env::VEnvPtr venv, env::TEnvPtr tenv,
                            err::ErrorMsg *errormsg) const {
@@ -17,7 +20,6 @@ type::Ty *SimpleVar::SemAnalyze(env::VEnvPtr venv, env::TEnvPtr tenv,
   /* TODO: Put your lab4 code here */
   env::EnvEntry *entry = venv->Look(sym_);
   if(entry && typeid(*entry) == typeid(env::VarEntry)){
-    // return (static_cast<env::VarEntry *>(entry))->ty_->ActualTy();
     errormsg->Error(pos_, "%s huhuhu", sym_->Name().data());
     return (static_cast<env::VarEntry *>(entry))->ty_->ActualTy();
   }
@@ -205,29 +207,6 @@ type::Ty *RecordExp::SemAnalyze(env::VEnvPtr venv, env::TEnvPtr tenv,
     return type::IntTy::Instance();
   }
   
-  // std::list<type::Field *> fieldList = ((type::RecordTy*)typ_ty)->fields_->GetList();
-  // std::list<EField *> efieldList = fields_->GetList();
-  // auto field_it = fieldList.begin();
-  // auto efield_it = efieldList.begin();
-  // for(; field_it != fieldList.end(); field_it++){
-  //   if(efield_it == efieldList.end()){
-  //     errormsg->Error((*efield_it)->exp_->pos_, "number not matched!");
-  //     return type::IntTy::Instance();
-  //   }
-  //   if((*efield_it)->name_ != (*field_it)->name_){
-  //     errormsg->Error((*efield_it)->exp_->pos_, "should have same name!");
-  //     return type::IntTy::Instance();
-  //   }
-  //   if(typeid((*efield_it)) != typeid((*field_it))){
-  //     errormsg->Error((*efield_it)->exp_->pos_, "should have same type!");
-  //     return type::IntTy::Instance();
-  //   }
-  //   efield_it++;
-  // }
-  // if(efield_it != efieldList.end()){
-  //   errormsg->Error((*efield_it)->exp_->pos_, "number not matched!");
-  //   return type::IntTy::Instance();
-  // }
   return typ_ty;
 }
 
@@ -333,9 +312,6 @@ type::Ty *ForExp::SemAnalyze(env::VEnvPtr venv, env::TEnvPtr tenv,
   }
   venv->Enter(var_, new env::VarEntry(lo_ty, true));
   type::Ty *body_ty = body_->SemAnalyze(venv, tenv, labelcount, errormsg);
-  // if(typeid(*body_ty) != typeid(type::VoidTy)){
-  //   errormsg->Error(body_->pos_, "should produce no value!");
-  // }
   isInLoop--;
 
   return type::VoidTy::Instance();
@@ -354,6 +330,8 @@ type::Ty *LetExp::SemAnalyze(env::VEnvPtr venv, env::TEnvPtr tenv,
                              int labelcount, err::ErrorMsg *errormsg) const {
   /* TODO: Put your lab4 code here */
   errormsg->Error(pos_, "begin let exp");
+  std::vector<sym::Symbol*> curVec = funcVec;
+  funcVec.clear();
   std::list<Dec *> decs = decs_->GetList();
   for(Dec *dec : decs){
     dec->SemAnalyze(venv, tenv, labelcount, errormsg);
@@ -362,6 +340,7 @@ type::Ty *LetExp::SemAnalyze(env::VEnvPtr venv, env::TEnvPtr tenv,
   type::Ty *result;
   result = body_->SemAnalyze(venv, tenv, labelcount, errormsg);
   errormsg->Error(pos_, "end LetExp");
+  funcVec = curVec;
   return result;
 }
 
@@ -402,16 +381,8 @@ void FunctionDec::SemAnalyze(env::VEnvPtr venv, env::TEnvPtr tenv,
   std::list<FunDec *> functions = functions_->GetList();
   for(FunDec *function : functions){
     errormsg->Error(pos_, "do first");
-    int count = 0;
-    for(FunDec *tmp : functions){
-      if(function->name_ == tmp->name_){
-        count++;
-      }
-      if(count >= 2){
-        errormsg->Error(pos_, "two functions have the same name");
-        return;
-      }
-    }
+    funcVec.push_back(function->name_);
+    
     type::TyList *formals = function->params_->MakeFormalTyList(tenv, errormsg);
     if(function->result_){
       type::Ty *result_ty = tenv->Look(function->result_);
@@ -423,6 +394,16 @@ void FunctionDec::SemAnalyze(env::VEnvPtr venv, env::TEnvPtr tenv,
   }
   errormsg->Error(pos_, "finish first");
   for(FunDec *function : functions){
+    int count = 0;
+    for(sym::Symbol *tmp : funcVec){
+      if(function->name_ == tmp){
+        count++;
+      }
+      if(count >= 2){
+        errormsg->Error(pos_, "two functions have the same name");
+        return;
+      }
+    }
     errormsg->Error(pos_, "do second");
     type::TyList *formals = function->params_->MakeFormalTyList(tenv, errormsg);
     auto formal_it = formals->GetList().begin();
@@ -538,14 +519,6 @@ type::Ty *NameTy::SemAnalyze(env::TEnvPtr tenv, err::ErrorMsg *errormsg) const {
 type::Ty *RecordTy::SemAnalyze(env::TEnvPtr tenv,
                                err::ErrorMsg *errormsg) const {
   /* TODO: Put your lab4 code here */
-  // std::list<Field *> record = record_->GetList();
-  // auto it = record.begin();
-  // tenv->BeginScope();
-  // for(; it != record.end(); it++){
-  //   type::Ty *it_ty = tenv->Look((*it)->typ_);
-  //   tenv->Enter((*it)->name_, it_ty);
-  // }
-  // tenv->EndScope();
   errormsg->Error(pos_, "begin recordty");
   type::FieldList *fields = record_->MakeFieldList(tenv, errormsg);
   errormsg->Error(pos_, "end recordty");
