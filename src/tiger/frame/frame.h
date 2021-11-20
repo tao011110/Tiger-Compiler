@@ -4,6 +4,7 @@
 #include <list>
 #include <memory>
 #include <string>
+#include <vector>
 
 #include "tiger/frame/temp.h"
 #include "tiger/translate/tree.h"
@@ -71,13 +72,23 @@ protected:
 class Access {
 public:
   /* TODO: Put your lab5 code here */
-  
+  virtual tree::Exp *ToExp(tree::Exp *framePtr) const = 0;
   virtual ~Access() = default;
   
 };
 
 class Frame {
   /* TODO: Put your lab5 code here */
+  public:
+  temp::Label *name;
+  std::list<frame::Access*> formals_;
+  std::list<frame::Access*> locals_;
+  tree::SeqStm *stms_;
+  int offset = 0;
+
+  virtual Access *allocLocal(bool escape);
+  virtual tree::Exp *externalCall(std::string s, tree::ExpList *args);
+  virtual tree::Exp *getFramePtr();
 };
 
 /**
@@ -132,6 +143,8 @@ private:
 };
 
 /* TODO: Put your lab5 code here */
+frame::Frame NewFrame(temp::Label *name, std::list<bool> formals, frame::RegManager *reg_manager);
+tree::Stm *procEntryExit1(frame::Frame frame, tree::Stm *stm);
 
 } // namespace frame
 
