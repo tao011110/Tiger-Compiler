@@ -47,22 +47,22 @@ private:
 public:
   X64RegManager(){
     temp_map_->Empty();
-    temp_map_->Enter(rax, new std::string("%rax"));
-    temp_map_->Enter(rax, new std::string("%rbx"));
-    temp_map_->Enter(rax, new std::string("%rcx"));
-    temp_map_->Enter(rax, new std::string("%rdx"));
-    temp_map_->Enter(rax, new std::string("%rsi"));
-    temp_map_->Enter(rax, new std::string("%rdi"));
-    temp_map_->Enter(rax, new std::string("%rbp"));
-    temp_map_->Enter(rax, new std::string("%rsp"));
-    temp_map_->Enter(rax, new std::string("%r8"));
-    temp_map_->Enter(rax, new std::string("%r9"));
-    temp_map_->Enter(rax, new std::string("%r10"));
-    temp_map_->Enter(rax, new std::string("%r11"));
-    temp_map_->Enter(rax, new std::string("%r12"));
-    temp_map_->Enter(rax, new std::string("%r13"));
-    temp_map_->Enter(rax, new std::string("%r14"));
-    temp_map_->Enter(rax, new std::string("%r15"));
+    // temp_map_->Enter(rax, new std::string("%rax"));
+    // temp_map_->Enter(rax, new std::string("%rbx"));
+    // temp_map_->Enter(rax, new std::string("%rcx"));
+    // temp_map_->Enter(rax, new std::string("%rdx"));
+    // temp_map_->Enter(rax, new std::string("%rsi"));
+    // temp_map_->Enter(rax, new std::string("%rdi"));
+    // temp_map_->Enter(rax, new std::string("%rbp"));
+    // temp_map_->Enter(rax, new std::string("%rsp"));
+    // temp_map_->Enter(rax, new std::string("%r8"));
+    // temp_map_->Enter(rax, new std::string("%r9"));
+    // temp_map_->Enter(rax, new std::string("%r10"));
+    // temp_map_->Enter(rax, new std::string("%r11"));
+    // temp_map_->Enter(rax, new std::string("%r12"));
+    // temp_map_->Enter(rax, new std::string("%r13"));
+    // temp_map_->Enter(rax, new std::string("%r14"));
+    // temp_map_->Enter(rax, new std::string("%r15"));
   }
 
   temp::Temp *GetRegister(int regno) { return regs_[regno]; }
