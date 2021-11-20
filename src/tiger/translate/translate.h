@@ -32,11 +32,17 @@ public:
   Level *parent_;
 
   /* TODO: Put your lab5 code here */
+  Level *newLevel(Level *parent, temp::Label *name, std::list<bool> formals){
+
+  }
+  Level *outermost(){
+    
+  }
 };
 
 class ProgTr {
 public:
-  // TODO: Put your lab5 code here */
+  /* TODO: Put your lab5 code here */
 
   /**
    * Translate IR tree

@@ -20,7 +20,6 @@ type::Ty *SimpleVar::SemAnalyze(env::VEnvPtr venv, env::TEnvPtr tenv,
   /* TODO: Put your lab4 code here */
   env::EnvEntry *entry = venv->Look(sym_);
   if(entry && typeid(*entry) == typeid(env::VarEntry)){
-    errormsg->Error(pos_, "%s huhuhu", sym_->Name().data());
     return (static_cast<env::VarEntry *>(entry))->ty_->ActualTy();
   }
   else{

@@ -15,6 +15,8 @@ namespace tr {
 
 Access *Access::AllocLocal(Level *level, bool escape) {
   /* TODO: Put your lab5 code here */
+  frame::Access *frameAccess = level->frame_->allocLocal(escape);
+  return new Access(level, frameAccess);
 }
 
 class Cx {
@@ -50,12 +52,21 @@ public:
 
   [[nodiscard]] tree::Exp *UnEx() const override { 
     /* TODO: Put your lab5 code here */
+    return exp_;
   }
   [[nodiscard]] tree::Stm *UnNx() const override {
     /* TODO: Put your lab5 code here */
+    return new tree::ExpStm(UnEx());
   }
   [[nodiscard]] Cx UnCx(err::ErrorMsg *errormsg) const override {
     /* TODO: Put your lab5 code here */
+    temp::Label *t = temp::LabelFactory::NewLabel();
+    temp::Label *f = temp::LabelFactory::NewLabel();
+    tree::CjumpStm *stm = new tree::CjumpStm(tree::NE_OP, exp_, new tree::ConstExp(0), t, f);
+    temp::Label** trues, **falses;
+    *trues = stm->true_label_;
+    *falses = stm->false_label_;
+    return Cx(trues, falses, stm);
   }
 };
 
@@ -67,12 +78,15 @@ public:
 
   [[nodiscard]] tree::Exp *UnEx() const override {
     /* TODO: Put your lab5 code here */
+    return new tree::EseqExp(stm_, new tree::ConstExp(0));
   }
   [[nodiscard]] tree::Stm *UnNx() const override { 
     /* TODO: Put your lab5 code here */
+    return stm_;
   }
   [[nodiscard]] Cx UnCx(err::ErrorMsg *errormsg) const override {
     /* TODO: Put your lab5 code here */
+    return Cx(nullptr, nullptr, nullptr);
   }
 };
 
@@ -85,12 +99,23 @@ public:
   
   [[nodiscard]] tree::Exp *UnEx() const override {
     /* TODO: Put your lab5 code here */
+    temp::Temp *r = temp::TempFactory::NewTemp();
+    temp::Label *t = temp::LabelFactory::NewLabel();
+    temp::Label *f = temp::LabelFactory::NewLabel();
+    return new tree::EseqExp(
+      new tree::MoveStm(new tree::TempExp(r), new tree::ConstExp(1)),
+      new tree::EseqExp(cx_.stm_, new tree::EseqExp(
+        new tree::LabelStm(f),
+        new tree::EseqExp(new tree::MoveStm(new tree::TempExp(r),new tree::ConstExp(0)),
+        new tree::EseqExp(new tree::LabelStm(t), new tree::TempExp(r))))));
   }
   [[nodiscard]] tree::Stm *UnNx() const override {
     /* TODO: Put your lab5 code here */
+    return new tree::ExpStm(UnEx());
   }
   [[nodiscard]] Cx UnCx(err::ErrorMsg *errormsg) const override { 
     /* TODO: Put your lab5 code here */
+    return cx_;
   }
 };
 
@@ -106,18 +131,55 @@ tr::ExpAndTy *AbsynTree::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
                                    tr::Level *level, temp::Label *label,
                                    err::ErrorMsg *errormsg) const {
   /* TODO: Put your lab5 code here */
+  
 }
 
 tr::ExpAndTy *SimpleVar::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
                                    tr::Level *level, temp::Label *label,
                                    err::ErrorMsg *errormsg) const {
   /* TODO: Put your lab5 code here */
+  env::EnvEntry *entry = venv->Look(sym_);
+  if(entry && typeid(*entry) == typeid(env::VarEntry)){
+    env::VarEntry* ventry = (env::VarEntry*)entry;
+    tr::Access *access = ventry->access_;
+    while(level != ventry->access_->level_){
+      level = level->parent_;
+    }
+    tree::Exp *exp = ventry->access_->access_->ToExp(level->frame_->getFramePtr());
+
+    return new tr::ExpAndTy(new tr::ExExp(exp), ventry->ty_->ActualTy());
+  }
+  else{
+    errormsg->Error(pos_, "undefined variable %s", sym_->Name().data());
+    return new tr::ExpAndTy(nullptr, type::IntTy::Instance());
+  }
 }
 
 tr::ExpAndTy *FieldVar::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
                                   tr::Level *level, temp::Label *label,
                                   err::ErrorMsg *errormsg) const {
   /* TODO: Put your lab5 code here */
+  errormsg->Error(pos_, "begin fieldvar");
+  tr::ExpAndTy *var = var_->Translate(venv, tenv, level, label, errormsg);
+  type::Ty *ty = var->ty_->ActualTy();
+  if(!ty || typeid(*ty) != typeid(type::RecordTy)){
+    errormsg->Error(pos_, "not a record type");
+    return new tr::ExpAndTy(nullptr, type::IntTy::Instance());
+  }
+  type::FieldList *fields = (static_cast<type::RecordTy *>(ty))->fields_;
+  std::list<type::Field *> filed_list = fields->GetList();
+  std::list<type::Field *>::iterator tmp = filed_list.begin();
+  int offset = 0;
+  while(tmp != filed_list.end()){
+    if((*tmp)->name_ == sym_){
+      //TODO: unfinished here!
+      return new tr::ExpAndTy(nullptr, type::IntTy::Instance());
+    }
+    tmp++;
+    offset++;
+  }
+  errormsg->Error(pos_, "field %s doesn't exist", sym_->Name().data());
+  return new tr::ExpAndTy(nullptr, type::IntTy::Instance());
 }
 
 tr::ExpAndTy *SubscriptVar::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
