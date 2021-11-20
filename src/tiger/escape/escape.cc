@@ -1,5 +1,6 @@
 #include "tiger/escape/escape.h"
 #include "tiger/absyn/absyn.h"
+#include <iostream>
 
 namespace esc {
 void EscFinder::FindEscape() { absyn_tree_->Traverse(env_.get()); }
@@ -15,9 +16,13 @@ void AbsynTree::Traverse(esc::EscEnvPtr env) {
 void SimpleVar::Traverse(esc::EscEnvPtr env, int depth) {
   /* TODO: Put your lab5 code here */
   esc::EscapeEntry *entry = env->Look(sym_);
-  if(entry && depth > entry->depth_){
+  // std::cout << sym_->Name() << " is " << depth << "  while the env depth is " << entry->depth_ << std::endl;
+  if(entry && depth > entry->depth_ && !*(entry->escape_)){
     *(entry->escape_) = true;
   }
+  // else{
+  //   *(entry->escape_) = false;
+  // }
 }
 
 void FieldVar::Traverse(esc::EscEnvPtr env, int depth) {
@@ -53,10 +58,10 @@ void StringExp::Traverse(esc::EscEnvPtr env, int depth) {
 
 void CallExp::Traverse(esc::EscEnvPtr env, int depth) {
   /* TODO: Put your lab5 code here */
-  std::list<Exp *> args = args_->GetList();
-  for(auto it = args.begin(); it != args.end(); it++){
-    (*it)->Traverse(env, depth);
-  }
+  // std::list<Exp *> args = args_->GetList();
+  // for(auto it = args.begin(); it != args.end(); it++){
+  //   (*it)->Traverse(env, depth);
+  // }
 }
 
 void OpExp::Traverse(esc::EscEnvPtr env, int depth) {
@@ -104,6 +109,8 @@ void WhileExp::Traverse(esc::EscEnvPtr env, int depth) {
 
 void ForExp::Traverse(esc::EscEnvPtr env, int depth) {
   /* TODO: Put your lab5 code here */
+  // std::cout << "for  put in  " << var_->Name() << "  with depth  " << depth << std::endl;
+  escape_ = false;
   env->Enter(var_, new esc::EscapeEntry(depth, &escape_));
   lo_->Traverse(env, depth);
   hi_->Traverse(env, depth);
@@ -140,16 +147,22 @@ void FunctionDec::Traverse(esc::EscEnvPtr env, int depth) {
   depth++;
   std::list<FunDec *> functions = functions_->GetList();
   for(auto func = functions.begin(); func != functions.end(); func++){
+    env->BeginScope();
     std::list<Field *> params = (*func)->params_->GetList();
     for(auto param = params.begin(); param != params.end(); param++){
+      (*param)->escape_ = false;
       env->Enter((*param)->name_, new esc::EscapeEntry(depth, &(*param)->escape_));
+      // std::cout << "func  put in  " << (*param)->name_->Name() << "  with depth  " << depth << std::endl;
     }
     (*func)->body_->Traverse(env, depth);
+    env->EndScope();
   }
 }
 
 void VarDec::Traverse(esc::EscEnvPtr env, int depth) {
   /* TODO: Put your lab5 code here */
+  // std::cout << "var  put in  " << var_->Name() << "  with depth  " << depth << std::endl;
+  escape_ = false;
   env->Enter(var_, new esc::EscapeEntry(depth, &escape_));
   init_->Traverse(env, depth);
 }
