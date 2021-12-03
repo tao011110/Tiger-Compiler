@@ -83,7 +83,7 @@ class Frame {
   temp::Label *name;
   std::list<frame::Access*> formals_;
   std::list<frame::Access*> locals_;
-  tree::SeqStm *stms_;
+  tree::StmList *stms_;
   int offset = 0;
 
   virtual Access *allocLocal(bool escape);
@@ -143,9 +143,13 @@ private:
 };
 
 /* TODO: Put your lab5 code here */
-frame::Frame NewFrame(temp::Label *name, std::list<bool> formals, frame::RegManager *reg_manager);
-tree::Stm *procEntryExit1(frame::Frame frame, tree::Stm *stm);
+frame::Frame *NewFrame(temp::Label *name, std::list<bool> formals);
 
+tree::Stm *procEntryExit1(frame::Frame *frame, tree::Stm *stm);
+
+assem::InstrList *procEntryExit2(assem::InstrList *body);
+
+assem::Proc *procEntryExit3(frame::Frame *frame, assem::InstrList *body);
 } // namespace frame
 
 #endif

@@ -16,6 +16,8 @@ class Exp;
 class ExpAndTy;
 class Level;
 
+// frame::Frags frags;
+
 class Access {
 public:
   Level *level_;
@@ -32,19 +34,16 @@ public:
   Level *parent_;
 
   /* TODO: Put your lab5 code here */
-  Level *newLevel(Level *parent, temp::Label *name, std::list<bool> formals){
+  Level(frame::Frame *frame, Level *parent): frame_(frame), parent_(parent){}
 
-  }
-  Level *outermost(){
-    
-  }
 };
 
 class ProgTr {
 public:
   /* TODO: Put your lab5 code here */
-  ProgTr(std::unique_ptr<absyn::AbsynTree> absyn_tree_, std::unique_ptr<err::ErrorMsg> errormsg_){
-    
+  ProgTr(std::unique_ptr<absyn::AbsynTree> absyn_tree, std::unique_ptr<err::ErrorMsg> errormsg){
+    absyn_tree_ = std::move(absyn_tree);
+    errormsg_ = std::move(errormsg);
   }
   /**
    * Translate IR tree
@@ -71,6 +70,22 @@ private:
   void FillBaseVEnv();
   void FillBaseTEnv();
 };
+
+Level *newLevel(Level *parent, temp::Label *name, std::list<bool> formals){
+  formals.push_front(true);
+  frame::Frame *newFrame = frame::NewFrame(name, formals);
+  tr::Level *level = new tr::Level(newFrame, parent);
+
+  return level;
+}
+
+Level *outermost(){
+  temp::Label *label = temp::LabelFactory::NamedLabel(std::string("tigermain"));
+  std::list<bool> formals;
+  Level *level = newLevel(nullptr, label, formals);
+
+  return level;
+}
 
 } // namespace tr
 
