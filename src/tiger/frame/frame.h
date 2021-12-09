@@ -17,7 +17,7 @@ class RegManager {
 public:
   RegManager() : temp_map_(temp::Map::Empty()) {}
 
-  temp::Temp *GetRegister(int regno) { return regs_[regno]; }
+  virtual temp::Temp *GetRegister(int regno) = 0;
 
   /**
    * Get general-purpose registers except RSI
@@ -84,11 +84,14 @@ class Frame {
   std::list<frame::Access*> formals_;
   std::list<frame::Access*> locals_;
   tree::StmList *stms_;
-  int offset = 0;
+  int offset;
 
-  virtual Access *allocLocal(bool escape);
-  virtual tree::Exp *externalCall(std::string s, tree::ExpList *args);
-  virtual tree::Exp *getFramePtr();
+  virtual Access *allocLocal(bool escape)  = 0;
+  virtual tree::Exp *externalCall(std::string s, tree::ExpList *args)  = 0;
+  virtual tree::Exp *getFramePtr() = 0;
+  virtual std::string GetLabel() = 0;
+  Frame(){}
+  virtual ~Frame(){}
 };
 
 /**
@@ -127,7 +130,7 @@ public:
   tree::Stm *body_;
   Frame *frame_;
 
-  ProcFrag(tree::Stm *body, Frame *frame) : body_(body), frame_(frame) {}
+  ProcFrag(tree::Stm *body, Frame *frame) : body_(body), frame_(frame) {printf("\nprog name is %s\n", frame->name->Name().data());}
 
   void OutputAssem(FILE *out, OutputPhase phase, bool need_ra) const override;
 };

@@ -89,7 +89,7 @@ class Interpreter(object):
         def _parse_args(line, num):
             parts = line.partition(' ')
             args  = parts[2].split(',')
-            assert len(args) == num, 'Wrong args number in instruction'
+            assert len(args) == num, line
             args_res = []
             for i in range(num):
                 args_res.append(args[i].strip())
