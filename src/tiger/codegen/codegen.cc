@@ -1,6 +1,5 @@
 #include "tiger/codegen/codegen.h"
 
-#include <cassert>
 #include <sstream>
 #include <iostream>
 
@@ -17,56 +16,31 @@ namespace cg {
 
 void CodeGen::Codegen() {
   /* TODO: Put your lab5 code here */
-  // set framesize label
-  // std::cout<<"frame_:"<<this->frame_<<std::endl;
-  fs_=this->frame_->name->Name()+"_framesize";
-  // std::cout<<"fs:"<<fs_<<std::endl;
-
-  std::list<temp::Temp *> callee_regs = reg_manager->CalleeSaves()->GetList();
-  std::vector<temp::Temp *> protect_regs_list;
-
-  // init instr list
-  assem::InstrList* instr_list=new assem::InstrList();
-  assem_instr_=std::make_unique<AssemInstr>(instr_list);
-
-  // protect
-  // move the callee save regs value to other regs, for its callee's responsibility to protect them
-  for(const auto& reg:callee_regs)
-  {
-    temp::Temp* to_reg=temp::TempFactory::NewTemp();
-    protect_regs_list.push_back(to_reg);
-    assem_instr_->GetInstrList()->Append(
-      new assem::MoveInstr(
-        "movq `s0, `d0",
-        new temp::TempList({to_reg}),
-        new temp::TempList({reg})));
-  }
-
-  // munch
+  fs_= frame_->name->Name() + "_framesize";
+  assem::InstrList *instr_list = new assem::InstrList();
   std::list<tree::Stm *> stm_list = traces_->GetStmList()->GetList();
-  for(const auto& stm:stm_list)
-  {
-    stm->Munch(*(assem_instr_->GetInstrList()),fs_);
+  std::vector<temp::Temp *> tmp_store;
+  
+  // save callee-saved regs
+  for(auto reg: reg_manager->CalleeSaves()->GetList()){
+    temp::Temp *tmp = temp::TempFactory::NewTemp();
+    tmp_store.push_back(tmp);
+    instr_list->Append(new assem::MoveInstr(std::string("movq `s0, `d0"), new temp::TempList(tmp), new temp::TempList(reg)));
   }
 
-
-  // restore value to callee save rigister
-  int count=0;
-  for(const auto& reg:callee_regs)
-  {
-    assem_instr_->GetInstrList()->Append(
-      new assem::MoveInstr(
-        "movq `s0, `d0",
-        new temp::TempList({reg}),
-        new temp::TempList({protect_regs_list[count]})));
-    count++;
+  for(auto stm : stm_list){
+    stm->Munch(*instr_list, fs_);
   }
 
-  // program exit
-  // rsp,rax, and all callee save reigsters still active, can not be used for other purpose
-  assem_instr_->GetInstrList()->Append(
-    new assem::OperInstr("",nullptr,reg_manager->ReturnSink(),new assem::Targets(nullptr)));
+  // restore save callee-saved regs
+  int i = 0;
+  for(auto reg: reg_manager->CalleeSaves()->GetList()){
+    instr_list->Append(new assem::MoveInstr(std::string("movq `s0, `d0"), new temp::TempList(reg), new temp::TempList(tmp_store[i])));
+    i++;
+  }
 
+  assem_instr_ = std::make_unique<AssemInstr>(instr_list);
+  frame::procEntryExit2(assem_instr_->GetInstrList());
 }
 
 void AssemInstr::Print(FILE *out, temp::Map *map) const {
@@ -81,261 +55,243 @@ namespace tree {
 
 void SeqStm::Munch(assem::InstrList &instr_list, std::string_view fs) {
   /* TODO: Put your lab5 code here */
-  this->left_->Munch(instr_list,fs);
-  this->right_->Munch(instr_list,fs);
+  left_->Munch(instr_list, fs);
+  right_->Munch(instr_list, fs);
 }
 
 void LabelStm::Munch(assem::InstrList &instr_list, std::string_view fs) {
   /* TODO: Put your lab5 code here */
-  // std::cout<<"label stm:"<<label_<<std::endl;
-  // std::cout<<"label name:"<<label_->Name()<<std::endl;
-  instr_list.Append(new assem::LabelInstr(temp::LabelFactory::LabelString(label_),label_));
+  assem::LabelInstr *instr = new assem::LabelInstr(label_->Name(), label_);
+  instr_list.Append(instr);
 }
 
 void JumpStm::Munch(assem::InstrList &instr_list, std::string_view fs) {
   /* TODO: Put your lab5 code here */
-  temp::Label* jump_label=exp_->name_;
-  std::string instr_str="jmp "+temp::LabelFactory::LabelString(jump_label);
-  instr_list.Append(new assem::OperInstr(instr_str,nullptr,nullptr,new assem::Targets(jumps_)));
-
+  temp::Label* jump_label = exp_->name_;
+  std::string instr = std::string("jmp ") + temp::LabelFactory::LabelString(jump_label);
+  instr_list.Append(new assem::OperInstr(instr, nullptr, nullptr, new assem::Targets(jumps_)));
 }
 
 void CjumpStm::Munch(assem::InstrList &instr_list, std::string_view fs) {
   /* TODO: Put your lab5 code here */
-  temp::Temp* left = left_->Munch(instr_list,fs);
-  temp::Temp* right = right_->Munch(instr_list,fs);
-  // set condition code based on s1-s0
-  // cmpq right,left
-  instr_list.Append(new assem::OperInstr("cmpq `s0, `s1",nullptr,new temp::TempList({right,left}),nullptr));
-  std::string instr_str="";
-  switch(this->op_)
+  temp::Temp* left = left_->Munch(instr_list, fs);
+  temp::Temp* right = right_->Munch(instr_list, fs);
+  temp::TempList *src = new temp::TempList(right);
+  src->Append(left);
+  //compare right with left, set, then jump
+  instr_list.Append(new assem::OperInstr(std::string("cmpq `s0, `s1"), nullptr, src, nullptr));
+
+  std::string instr_str;
+  switch(op_)
   {
-    case tree::RelOp::EQ_OP: instr_str+="je"; break;
-    case tree::RelOp::NE_OP: instr_str+="jne"; break;
-    case tree::RelOp::LT_OP: instr_str+="jl"; break;
-    case tree::RelOp::GT_OP: instr_str+="jg"; break;
-    case tree::RelOp::LE_OP: instr_str+="jle"; break;
-    case tree::RelOp::GE_OP: instr_str+="jge"; break;
+    case tree::RelOp::EQ_OP: 
+      instr_str = std::string("je"); 
+      break;
+    case tree::RelOp::NE_OP: 
+      instr_str = std::string("jne"); 
+      break;
+    case tree::RelOp::LT_OP: 
+      instr_str = std::string("jl"); 
+      break;
+    case tree::RelOp::GT_OP: 
+      instr_str = std::string("jg"); 
+      break;
+    case tree::RelOp::LE_OP: 
+      instr_str = std::string("jle"); 
+      break;
+    case tree::RelOp::GE_OP: 
+      instr_str = std::string("jge"); 
+      break;
+    default:
+      break;
   }
-  instr_str+=" `j0";
-  instr_list.Append(new assem::OperInstr(instr_str,nullptr,nullptr,new assem::Targets(new std::vector<temp::Label *>{this->true_label_})));
+  instr_str += std::string(" `j0");
+  std::vector<temp::Label *> *targets = new std::vector<temp::Label *>();
+  targets->push_back(true_label_);
+  instr_list.Append(new assem::OperInstr(instr_str, nullptr, nullptr, new assem::Targets(targets)));
 }
 
 void MoveStm::Munch(assem::InstrList &instr_list, std::string_view fs) {
   /* TODO: Put your lab5 code here */
-  // if src is mem, means read from mem, so just munch it with MemExp, get the value from returned register
-  // mem on dst, means store, memExp just means read mem value to register
-  if(typeid(*dst_)==typeid(tree::MemExp))
-  {
-    temp::Temp* src = src_->Munch(instr_list,fs);
-    tree::MemExp* dst = static_cast<tree::MemExp*>(dst_);
-    // get the register of dst exp directly
-    temp::Temp* dst_exp_reg = dst->exp_->Munch(instr_list,fs);
-    instr_list.Append(new assem::OperInstr("movq `s0, (`s1)",nullptr,new temp::TempList({src,dst_exp_reg}),nullptr));
-    return;
+  if(typeid(*dst_) == typeid(tree::TempExp)){
+    // LOAD
+    temp::TempList *src = new temp::TempList(src_->Munch(instr_list, fs));
+    temp::TempList *dst = new temp::TempList(dst_->Munch(instr_list, fs));
+    instr_list.Append(new assem::MoveInstr(std::string("movq `s0, `d0"), dst, src));
   }
-  else if(typeid(*dst_)==typeid(tree::TempExp))
-  {
-    temp::Temp* src = src_->Munch(instr_list,fs);
-    temp::Temp* dst = dst_->Munch(instr_list,fs);
-    instr_list.Append(new assem::MoveInstr("movq `s0, `d0",new temp::TempList({dst}),new temp::TempList({src})));
-    return;
+  else{
+    // STORE
+    temp::TempList *src = new temp::TempList(src_->Munch(instr_list, fs));
+    // use the (tree::MemExp*) to make the dst_ a MemExp
+    src->Append(((tree::MemExp*)dst_)->exp_->Munch(instr_list, fs));
+    instr_list.Append(new assem::OperInstr(std::string("movq `s0, (`s1)"), nullptr, src, nullptr));
   }
 }
 
 void ExpStm::Munch(assem::InstrList &instr_list, std::string_view fs) {
   /* TODO: Put your lab5 code here */
-  exp_->Munch(instr_list,fs);
+  exp_->Munch(instr_list, fs); 
 }
 
 temp::Temp *BinopExp::Munch(assem::InstrList &instr_list, std::string_view fs) {
   /* TODO: Put your lab5 code here */
   temp::Temp* reg = temp::TempFactory::NewTemp();
-  temp::Temp* left = left_->Munch(instr_list,fs);
-  temp::Temp* right = right_->Munch(instr_list,fs);
-  switch(this->op_)
+  temp::Temp* left = left_->Munch(instr_list, fs);
+  temp::Temp* right = right_->Munch(instr_list, fs);
+  switch(op_)
   {
     case tree::PLUS_OP:
     {
-      instr_list.Append(new assem::MoveInstr("movq `s0, `d0",new temp::TempList({reg}),new temp::TempList({left})));
-      // reg is source and destination, its value will be read and written. though reg not appear in source
-      instr_list.Append(new assem::OperInstr("addq `s0, `d0",new temp::TempList({reg}),new temp::TempList({right,reg}),nullptr));
+      temp::TempList *dst = new temp::TempList(reg);
+      instr_list.Append(new assem::MoveInstr(std::string("movq `s0, `d0"), dst, new temp::TempList(left)));
+      temp::TempList *src = new temp::TempList(right);
+      src->Append(reg);
+      instr_list.Append(new assem::OperInstr(std::string("addq `s0, `d0"), dst, src, nullptr));
       break;
     }
     case tree::MINUS_OP:
     {
-      instr_list.Append(new assem::MoveInstr("movq `s0, `d0",new temp::TempList({reg}),new temp::TempList({left})));
-      instr_list.Append(new assem::OperInstr("subq `s0, `d0",new temp::TempList({reg}),new temp::TempList({right,reg}),nullptr));
+      temp::TempList *dst = new temp::TempList(reg);
+      instr_list.Append(new assem::MoveInstr(std::string("movq `s0, `d0"), dst, new temp::TempList(left)));
+      temp::TempList *src = new temp::TempList(right);
+      src->Append(reg);
+      instr_list.Append(new assem::OperInstr(std::string("subq `s0, `d0"), dst, src, nullptr));
       break;
     }
     case tree::MUL_OP:
     {
-      temp::Temp* rdx_spec=reg_manager->Registers()->NthTemp(3);
-      temp::Temp* rax_spec=reg_manager->ReturnValue();
-      instr_list.Append(new assem::MoveInstr("movq `s0, `d0",new temp::TempList({rax_spec}),new temp::TempList({left})));
-      // extend rax to rax and rdx
-      instr_list.Append(new assem::OperInstr("cqto", new temp::TempList({rax_spec,rdx_spec}), new temp::TempList({rax_spec}), nullptr));
-      instr_list.Append(new assem::OperInstr("imulq `s0",new temp::TempList({rax_spec,rdx_spec}),new temp::TempList({right,rax_spec,rdx_spec}),nullptr));
-      instr_list.Append(new assem::MoveInstr("movq `s0, `d0",new temp::TempList({reg}),new temp::TempList({rax_spec})));
+      temp::Temp *rdx = reg_manager->Registers()->NthTemp(3);
+      temp::Temp *rax = reg_manager->ReturnValue();
+      instr_list.Append(new assem::MoveInstr(std::string("movq `s0, `d0"), new temp::TempList(rax), new temp::TempList(left)));
+      temp::TempList *dst = new temp::TempList(rax);
+      dst->Append(rdx);
+      // be careful with cqto here 
+      instr_list.Append(new assem::OperInstr(std::string("cqto"), dst, new temp::TempList(rax), nullptr));
+      temp::TempList *src = new temp::TempList(right);
+      src->Append(rax);
+      src->Append(rdx);
+      // be careful with imulq here 
+      instr_list.Append(new assem::OperInstr(std::string("imulq `s0"), dst, src, nullptr));
+      instr_list.Append(new assem::MoveInstr(std::string("movq `s0, `d0"), new temp::TempList(reg),new temp::TempList(rax)));
       break;
     }
     case tree::DIV_OP:
     {
-      temp::Temp* rdx_spec=reg_manager->Registers()->NthTemp(3);
-      temp::Temp* rax_spec=reg_manager->ReturnValue();
-      // divide is special in x86
-      // move dividend to rax first
-      instr_list.Append(new assem::MoveInstr("movq `s0, `d0",new temp::TempList({rax_spec}),new temp::TempList({left})));
-      // rax and rdx act as a oct word dividend, right acts as divisor
-      instr_list.Append(new assem::OperInstr("cqto", new temp::TempList({rax_spec,rdx_spec}), new temp::TempList({rax_spec}), nullptr));
-      instr_list.Append(new assem::OperInstr("idivq `s0",new temp::TempList({rax_spec,rdx_spec}),new temp::TempList({right, rax_spec,rdx_spec}),nullptr));
-      // move the rax which stores smaller bytes to result register
-      instr_list.Append(new assem::MoveInstr("movq `s0, `d0",new temp::TempList({reg}),new temp::TempList({rax_spec})));
+      temp::Temp* rdx = reg_manager->Registers()->NthTemp(3);
+      temp::Temp* rax = reg_manager->ReturnValue();
+      instr_list.Append(new assem::MoveInstr(std::string("movq `s0, `d0"),new temp::TempList(rax),new temp::TempList(left)));
+      temp::TempList *dst = new temp::TempList(rax);
+      dst->Append(rdx);
+      // be careful with cqto here 
+      instr_list.Append(new assem::OperInstr(std::string("cqto"), dst, new temp::TempList(rax), nullptr));
+      temp::TempList *src = new temp::TempList(right);
+      src->Append(rax);
+      src->Append(rdx);
+      instr_list.Append(new assem::OperInstr(std::string("idivq `s0"), dst, src, nullptr));
+      instr_list.Append(new assem::MoveInstr(std::string("movq `s0, `d0"),new temp::TempList(reg),new temp::TempList(rax)));
       break;
     }
+    default:
+      break;
   }
   return reg;
 }
 
 temp::Temp *MemExp::Munch(assem::InstrList &instr_list, std::string_view fs) {
   /* TODO: Put your lab5 code here */
-  // the result of memory operation store to another register
-  temp::Temp* reg = temp::TempFactory::NewTemp();
-  temp::Temp* exp_reg = exp_->Munch(instr_list,fs);
-  instr_list.Append(new assem::OperInstr("movq (`s0), `d0",new temp::TempList({reg}),new temp::TempList({exp_reg}),nullptr));
+  temp::Temp *reg = temp::TempFactory::NewTemp();
+  temp::TempList *dst = new temp::TempList(reg);
+  temp::Temp *exp = exp_->Munch(instr_list, fs);
+  temp::TempList *src = new temp::TempList(exp);
+  instr_list.Append(new assem::OperInstr("movq (`s0), `d0", dst, src, nullptr));
   return reg;
 }
 
 temp::Temp *TempExp::Munch(assem::InstrList &instr_list, std::string_view fs) {
   /* TODO: Put your lab5 code here */
-  // if virtual frame pointer, convert to stack pointer + frame size
   if(temp_==reg_manager->FramePointer())
   {
-    // framesize is set to specific size in .set
-    // .set name, expr assign name with expression
-    // so it will be replaced with a value when linking
-    temp::Temp* reg = temp::TempFactory::NewTemp();
-    std::string instr_str="leaq "+std::string(fs)+"(`s0), `d0";
-    instr_list.Append(new assem::OperInstr(instr_str,new temp::TempList({reg}),new temp::TempList({reg_manager->StackPointer()}),nullptr));
+    temp::Temp *reg = temp::TempFactory::NewTemp();
+    std::string instr_str= std::string("leaq ") + std::string(fs) + std::string("(`s0), `d0");
+    instr_list.Append(new assem::OperInstr(instr_str, new temp::TempList(reg), new temp::TempList(reg_manager->StackPointer()), nullptr));
     return reg;
   }
-  return temp_;
+  else{
+    return temp_;
+  }
 }
 
 temp::Temp *EseqExp::Munch(assem::InstrList &instr_list, std::string_view fs) {
   /* TODO: Put your lab5 code here */
-  stm_->Munch(instr_list,fs);
-  return exp_->Munch(instr_list,fs);
+  stm_->Munch(instr_list, fs);
+  return exp_->Munch(instr_list, fs);
 }
 
 temp::Temp *NameExp::Munch(assem::InstrList &instr_list, std::string_view fs) {
   /* TODO: Put your lab5 code here */
-  // RIP is the instruction pointer register, find address in relative way
-  // name dose not means absolute address. Points to the name in RIP relative way
-  // key reason is the offset between text sector and data sector is fixed
-  std::string name = this->name_->Name();
-  if(this->name_->Name() == "\n"){
-    name = "";
-  }
-  std::string instr_str="leaq "+name+"(%rip), `d0";
-  temp::Temp* name_addr = temp::TempFactory::NewTemp();
-  instr_list.Append(new assem::OperInstr(instr_str,new temp::TempList({name_addr}),nullptr,nullptr));
-  return name_addr;
+  temp::Temp *address = temp::TempFactory::NewTemp();
+  std::string instr_str = std::string("leaq ") + name_->Name() + std::string("(%rip), `d0");
+  instr_list.Append(new assem::OperInstr(instr_str, new temp::TempList(address), nullptr, nullptr));
+
+  return address;
 }
 
 temp::Temp *ConstExp::Munch(assem::InstrList &instr_list, std::string_view fs) {
   /* TODO: Put your lab5 code here */
-  temp::Temp* reg = temp::TempFactory::NewTemp();
-  std::string instr_str="movq $"+std::to_string(consti_)+", `d0";
-  instr_list.Append(new assem::OperInstr(instr_str,new temp::TempList({reg}),nullptr,nullptr));
+  temp::Temp  *reg = temp::TempFactory::NewTemp();
+  std::string instr_str= std::string("movq $") + std::to_string(consti_)+ std::string(", `d0");
+  instr_list.Append(new assem::OperInstr(instr_str, new temp::TempList(reg), nullptr, nullptr));
+
   return reg;
 }
 
 temp::Temp *CallExp::Munch(assem::InstrList &instr_list, std::string_view fs) {
   /* TODO: Put your lab5 code here */
-  temp::Temp* ret_reg=temp::TempFactory::NewTemp();
-  tree::NameExp* func_name=static_cast<tree::NameExp*>(fun_);
+  temp::Temp *ret = temp::TempFactory::NewTemp();
+  temp::TempList *alloced_args = args_->MunchArgs(instr_list, fs);
+  std::string instr_str = std::string("call ") + ((tree::NameExp*)fun_)->name_->Name();
 
-  // before munch args, protect the registers that convey args values
-  // std::list<temp::Temp *> arg_regs = reg_manager->ArgRegs()->GetList();
-  // std::list<temp::Temp *> protect_regs_list;
-  // int args_num=this->args_->GetList().size(), arg_cnt=0;
-  // for(const auto& reg:arg_regs)
-  // {
-  //   if(arg_cnt>=args_num) break;
-  //   temp::Temp* to_reg=temp::TempFactory::NewTemp();
-  //   protect_regs_list.push_back(to_reg);
-  //   instr_list.Append(
-  //     new assem::MoveInstr(
-  //       "movq `s0, `d0",
-  //       new temp::TempList({to_reg}),
-  //       new temp::TempList({reg})));
-  //   ++arg_cnt;
-  // }
+  instr_list.Append(new assem::OperInstr(instr_str, reg_manager->CallerSaves(), alloced_args, nullptr));
+  instr_list.Append(new assem::MoveInstr(std::string("movq `s0, `d0"), 
+    new temp::TempList(ret), new temp::TempList(reg_manager->ReturnValue())));
 
-  // handle all args correctly before call
-  // used_temp is for liveness analysis later
-  temp::TempList* used_temp = this->args_->MunchArgs(instr_list,fs);
-  std::string instr_str="call "+func_name->name_->Name();
-  
-  // calldefs only need caller save registers
-  // return address is in %rip, which is never allocated for other purpose. return value register is protected in next movq instruction
-
-  // use direct call, namely call label directly
-  instr_list.Append(new assem::OperInstr(instr_str,reg_manager->CallerSaves(),used_temp,nullptr));
-  instr_list.Append(new assem::MoveInstr("movq `s0, `d0",new temp::TempList({ret_reg}),new temp::TempList({reg_manager->ReturnValue()})));
-  // add rsp if push more args on stack
-
-  int used_num = used_temp->GetList().size();
-  int args_reg_num=reg_manager->ArgRegs()->GetList().size();
-  if(used_num>args_reg_num)
-  {
-    std::string add_rsp_instr="addq $"+std::to_string((used_num-args_reg_num)*reg_manager->WordSize())+", `d0";
-    instr_list.Append(new assem::OperInstr(add_rsp_instr,new temp::TempList({reg_manager->StackPointer()}),nullptr,nullptr));
+  int args_num = alloced_args->GetList().size();
+  int reg_num = reg_manager->ArgRegs()->GetList().size();
+  // pop the args on the stack
+  if(reg_num < args_num){
+    std::string instr = std::string("addq $") + std::to_string((args_num - reg_num) * reg_manager->WordSize()) + std::string(", `d0");
+    instr_list.Append(new assem::OperInstr(instr, new temp::TempList(reg_manager->StackPointer()), nullptr, nullptr));
   }
 
-  return ret_reg;
+  return ret;
 }
 
 temp::TempList *ExpList::MunchArgs(assem::InstrList &instr_list, std::string_view fs) {
   /* TODO: Put your lab5 code here */
   std::list<tree::Exp *> args_list = GetList();
-  std::list<temp::Temp *> tem_list = reg_manager->ArgRegs()->GetList();
-  temp::TempList* used_temp=new temp::TempList();
-  int tem_reg_max=tem_list.size(),cnt=0;
-  temp::Temp* pos_reg=temp::TempFactory::NewTemp();
-  for(const auto& arg:args_list)
-  {
-    temp::Temp* tem = arg->Munch(instr_list,fs);
-    used_temp->Append(tem);
-    if(cnt<tem_reg_max)
-    {
-      // move result of parameter to args register
-      instr_list.Append(new assem::MoveInstr("movq `s0, `d0",
-        new temp::TempList({reg_manager->ArgRegs()->NthTemp(cnt)}),
-        new temp::TempList({tem})));
-    }
-    else
-    {
-      // push the value to stack
-      // no push in lab5, so just sub and move
-      // std::string rsp_copy_str="movq %rsp, `d0";
-      // instr_list.Append(new assem::OperInstr(rsp_copy_str,new temp::TempList({pos_reg}),nullptr,nullptr));
-      // std::string sub_str=std::to_string((cnt-6)*reg_manager->WordSize());
-      // std::string rsp_copy_sub_str="subq $8, `d0";
-      // instr_list.Append(new assem::OperInstr(rsp_copy_sub_str,new temp::TempList({pos_reg}),nullptr,nullptr));
-      // std::string instr_str="movq `s0, (`s1)";
-      // instr_list.Append(new assem::OperInstr(instr_str,new temp::TempList({pos_reg}),new temp::TempList({tem}),nullptr));
-      // temp::Temp* pos_reg=temp::TempFactory::NewTemp();
+  std::list<temp::Temp *> regs = reg_manager->ArgRegs()->GetList();
+  temp::TempList *alloced_args = new temp::TempList();
+  temp::Temp *reg = temp::TempFactory::NewTemp();
+  int regs_num = regs.size();
+  int count = 0;
 
-      std::string sub_rsp="subq $8, %rsp";
-      instr_list.Append(new assem::OperInstr(sub_rsp,new temp::TempList({reg_manager->StackPointer()}),nullptr,nullptr));
-      std::string instr_str="movq `s0, (%rsp)";
-      instr_list.Append(new assem::OperInstr(instr_str,new temp::TempList({reg_manager->StackPointer()}),new temp::TempList({tem}),nullptr));
+  for(auto arg:args_list)
+  {
+    temp::Temp *tmp = arg->Munch(instr_list, fs);
+    alloced_args->Append(tmp);
+    if(count < regs_num){
+      instr_list.Append(new assem::MoveInstr(std::string("movq `s0, `d0"), 
+        new temp::TempList(reg_manager->ArgRegs()->NthTemp(count)), new temp::TempList(tmp)));
     }
-    ++cnt;
+    else{
+      instr_list.Append(new assem::OperInstr(std::string("subq $8, %rsp"), 
+        new temp::TempList(reg_manager->StackPointer()), nullptr, nullptr));
+      instr_list.Append(new assem::OperInstr(std::string("movq `s0, (%rsp)"),
+        new temp::TempList(reg_manager->StackPointer()), new temp::TempList(tmp), nullptr));
+    }
+    count++;
   }
-  return used_temp;
+  return alloced_args;
 }
 
 } // namespace tree

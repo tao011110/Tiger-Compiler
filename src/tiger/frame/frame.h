@@ -146,13 +146,14 @@ private:
 };
 
 /* TODO: Put your lab5 code here */
-frame::Frame *NewFrame(temp::Label *name, std::list<bool> formals);
+frame::Frame *newFrame(temp::Label *name, std::list<bool> formals);
 
 tree::Stm *procEntryExit1(frame::Frame *frame, tree::Stm *stm);
 
 assem::InstrList *procEntryExit2(assem::InstrList *body);
 
 assem::Proc *procEntryExit3(frame::Frame *frame, assem::InstrList *body);
+
 } // namespace frame
 
 #endif

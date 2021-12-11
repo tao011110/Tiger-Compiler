@@ -25,7 +25,7 @@ public:
 
   Access(Level *level, frame::Access *access)
       : level_(level), access_(access) {}
-  static Access *AllocLocal(Level *level, bool escape);
+  static Access *allocLocal(Level *level, bool escape);
 };
 
 class Level {
@@ -44,10 +44,6 @@ public:
   ProgTr(std::unique_ptr<absyn::AbsynTree> absyn_tree, std::unique_ptr<err::ErrorMsg> errormsg){
     absyn_tree_ = std::move(absyn_tree);
     errormsg_ = std::move(errormsg);
-    std::unique_ptr<env::TEnv> tenv_tmp = std::make_unique<env::TEnv>();
-    tenv_ = std::move(tenv_tmp);
-    std::unique_ptr<env::VEnv> venv_tmp = std::make_unique<env::VEnv>();
-    venv_ = std::move(venv_tmp);
   }
   /**
    * Translate IR tree
