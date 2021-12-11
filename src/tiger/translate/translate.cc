@@ -53,17 +53,17 @@ public:
 
   [[nodiscard]] tree::Exp *UnEx() const override { 
     /* TODO: Put your lab5 code here */
-    printf("ExExp UnEx");
+    //printf("ExExp UnEx");
     return exp_;
   }
   [[nodiscard]] tree::Stm *UnNx() const override {
     /* TODO: Put your lab5 code here */
-    printf("ExExp UnNx");
+    //printf("ExExp UnNx");
     return new tree::ExpStm(UnEx());
   }
   [[nodiscard]] Cx UnCx(err::ErrorMsg *errormsg) const override {
     /* TODO: Put your lab5 code here */
-    printf("begin ExExp UnCx");
+    //printf("begin ExExp UnCx");
     tree::CjumpStm* stm=new tree::CjumpStm(tree::NE_OP,exp_,new tree::ConstExp(0),nullptr,nullptr);
     temp::Label** trues=&stm->true_label_;
     temp::Label** falses=&stm->false_label_;
@@ -81,17 +81,17 @@ public:
 
   [[nodiscard]] tree::Exp *UnEx() const override {
     /* TODO: Put your lab5 code here */
-    printf("NxExp UnEx");
+    //printf("NxExp UnEx");
     return new tree::EseqExp(stm_, new tree::ConstExp(0));
   }
   [[nodiscard]] tree::Stm *UnNx() const override { 
     /* TODO: Put your lab5 code here */
-    printf("NxExp UnNx");
+    //printf("NxExp UnNx");
     return stm_;
   }
   [[nodiscard]] Cx UnCx(err::ErrorMsg *errormsg) const override {
     /* TODO: Put your lab5 code here */
-    printf("NxExp UnCx");
+    //printf("NxExp UnCx");
     // errormsg->Error(1, "wafwdada");
     return Cx(nullptr, nullptr, nullptr);
   }
@@ -107,7 +107,7 @@ public:
   
   [[nodiscard]] tree::Exp *UnEx() const override {
     /* TODO: Put your lab5 code here */
-    printf("begin NxExp UnEx");
+    //printf("begin NxExp UnEx");
     temp::Temp *r = temp::TempFactory::NewTemp();
     temp::Label *t = temp::LabelFactory::NewLabel();
     temp::Label *f = temp::LabelFactory::NewLabel();
@@ -122,7 +122,7 @@ public:
   }
   [[nodiscard]] tree::Stm *UnNx() const override {
     /* TODO: Put your lab5 code here */
-    printf("CxExp UnNx");
+    //printf("CxExp UnNx");
     temp::Label* label=temp::LabelFactory::NewLabel();
     *(cx_.trues_)=label;
     *(cx_.falses_)=label;
@@ -130,7 +130,7 @@ public:
   }
   [[nodiscard]] Cx UnCx(err::ErrorMsg *errormsg) const override { 
     /* TODO: Put your lab5 code here */
-    printf("CxExp UnCx");
+    //printf("CxExp UnCx");
     return cx_;
   }
 };
@@ -264,7 +264,7 @@ tr::ExpAndTy *IntExp::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
                                 tr::Level *level, temp::Label *label,
                                 err::ErrorMsg *errormsg) const {
   /* TODO: Put your lab5 code here */
-  printf("begin int exp %d", val_);
+  //printf("begin int exp %d", val_);
   return new tr::ExpAndTy(new tr::ExExp(new tree::ConstExp(val_)), type::IntTy::Instance());
 }
 
@@ -282,7 +282,7 @@ tr::ExpAndTy *CallExp::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
                                  tr::Level *level, temp::Label *label,
                                  err::ErrorMsg *errormsg) const {
   /* TODO: Put your lab5 code here */
-  printf("callexp %s\n", func_->Name().data());
+  //printf("callexp %s\n", func_->Name().data());
   env::FunEntry *entry = (env::FunEntry *)(venv->Look(func_));
   tr::Exp *exp;
   if(!entry){
@@ -718,11 +718,11 @@ tr::Exp *FunctionDec::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
     tr::Level *new_level = tr::newLevel(level, function->name_, formal_escape);
     if(function->result_){
       type::Ty *result_ty = tenv->Look(function->result_);
-      printf("enter the function %s\n", function->name_->Name().data());
+      //printf("enter the function %s\n", function->name_->Name().data());
       venv->Enter(function->name_, new env::FunEntry(new_level, function->name_, formals, result_ty));
     }
     else{
-      printf("enter the function %s\n", function->name_->Name().data());
+      //printf("enter the function %s\n", function->name_->Name().data());
       venv->Enter(function->name_, new env::FunEntry(new_level, function->name_, formals, type::VoidTy::Instance()));
     }
   }

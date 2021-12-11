@@ -130,7 +130,7 @@ public:
   tree::Stm *body_;
   Frame *frame_;
 
-  ProcFrag(tree::Stm *body, Frame *frame) : body_(body), frame_(frame) {printf("\nprog name is %s\n", frame->name->Name().data());}
+  ProcFrag(tree::Stm *body, Frame *frame) : body_(body), frame_(frame) {}
 
   void OutputAssem(FILE *out, OutputPhase phase, bool need_ra) const override;
 };
