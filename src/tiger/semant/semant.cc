@@ -23,7 +23,7 @@ type::Ty *SimpleVar::SemAnalyze(env::VEnvPtr venv, env::TEnvPtr tenv,
     return (static_cast<env::VarEntry *>(entry))->ty_->ActualTy();
   }
   else{
-    //errormsg->Error(pos_, "undefined variable %s", sym_->Name().data());
+    errormsg->Error(pos_, "undefined variable %s", sym_->Name().data());
     return type::IntTy::Instance();
   }
 }
@@ -34,7 +34,7 @@ type::Ty *FieldVar::SemAnalyze(env::VEnvPtr venv, env::TEnvPtr tenv,
   //errormsg->Error(pos_, "begin fieldvar");
   type::Ty *ty = var_->SemAnalyze(venv, tenv, labelcount, errormsg);
   if(!ty || typeid(*ty) != typeid(type::RecordTy)){
-    //errormsg->Error(pos_, "not a record type");
+    errormsg->Error(pos_, "not a record type");
     return type::IntTy::Instance();
   }
   type::FieldList *fields = (static_cast<type::RecordTy *>(ty))->fields_;
@@ -46,7 +46,7 @@ type::Ty *FieldVar::SemAnalyze(env::VEnvPtr venv, env::TEnvPtr tenv,
     }
     tmp++;
   }
-  //errormsg->Error(pos_, "field %s doesn't exist", sym_->Name().data());
+  errormsg->Error(pos_, "field %s doesn't exist", sym_->Name().data());
   return type::IntTy::Instance();
 }
 
@@ -59,11 +59,11 @@ type::Ty *SubscriptVar::SemAnalyze(env::VEnvPtr venv, env::TEnvPtr tenv,
   type::Ty *subscript_ty = subscript_->SemAnalyze(venv, tenv, labelcount, errormsg);
 
   if(typeid(*var_ty) != typeid(type::ArrayTy)){
-    //errormsg->Error(pos_, "array type required");
+    errormsg->Error(pos_, "array type required");
     return type::IntTy::Instance();
   }
   if(typeid(*subscript_ty) != typeid(type::IntTy)){
-    //errormsg->Error(pos_, "it is not an integer");
+    errormsg->Error(pos_, "it is not an integer");
     return type::IntTy::Instance();
   }
 
@@ -75,15 +75,12 @@ type::Ty *VarExp::SemAnalyze(env::VEnvPtr venv, env::TEnvPtr tenv,
   /* TODO: Put your lab4 code here */
   //errormsg->Error(pos_, "begin VarExp");
   if(typeid(*var_) == typeid(SimpleVar)){
-    //errormsg->Error(pos_, "it is a SimpleVar");
     return ((SimpleVar *)(var_))->SemAnalyze(venv, tenv, labelcount, errormsg);
   }
   if(typeid(*var_) == typeid(FieldVar)){
-    //errormsg->Error(pos_, "it is a FieldVar");
     return ((FieldVar *)(var_))->SemAnalyze(venv, tenv, labelcount, errormsg);
   }
   if(typeid(*var_) == typeid(SubscriptVar)){
-    //errormsg->Error(pos_, "it is a SubscriptVar");
     return ((SubscriptVar *)(var_))->SemAnalyze(venv, tenv, labelcount, errormsg);
   }
   //errormsg->Error(pos_, "it is not a VarExp");
@@ -115,7 +112,7 @@ type::Ty *CallExp::SemAnalyze(env::VEnvPtr venv, env::TEnvPtr tenv,
   //errormsg->Error(pos_, "begin CallExp");
   env::FunEntry *entry = (env::FunEntry *)(venv->Look(func_));
   if(!entry){
-    //errormsg->Error(pos_, "undefined function %s", func_->Name().data());
+    errormsg->Error(pos_, "undefined function %s", func_->Name().data());
     return type::VoidTy::Instance();
   }
   else{
@@ -127,17 +124,17 @@ type::Ty *CallExp::SemAnalyze(env::VEnvPtr venv, env::TEnvPtr tenv,
   auto args_it = args.begin();
   for(type::Ty *formal : formals){
     if(args_it == args.end()){
-      //errormsg->Error((*args_it)->pos_, "Formal parameters are more!");
+      errormsg->Error((*args_it)->pos_, "Formal parameters are more!");
       return type::IntTy::Instance();
     }
     if(!formal->IsSameType((*args_it)->SemAnalyze(venv, tenv, labelcount, errormsg))){
-      //errormsg->Error((*args_it)->pos_, "para type mismatch");
+      errormsg->Error((*args_it)->pos_, "para type mismatch");
       return type::IntTy::Instance();
     }
     args_it++;
   }
   if(args_it != args.end()){
-    //errormsg->Error((*args_it)->pos_, "too many params in function %s", func_->Name().data());
+    errormsg->Error((*args_it)->pos_, "too many params in function %s", func_->Name().data());
     return type::IntTy::Instance();
   }
   //errormsg->Error(pos_, "end CallExp");
@@ -153,41 +150,33 @@ type::Ty *OpExp::SemAnalyze(env::VEnvPtr venv, env::TEnvPtr tenv,
   if(oper_ == absyn::TIMES_OP || oper_ == absyn::DIVIDE_OP
       || oper_ == absyn::PLUS_OP || oper_ == absyn::MINUS_OP){
     if(typeid(*left_ty) != typeid(type::IntTy)){
-      //errormsg->Error(left_->pos_, "integer required");
+      errormsg->Error(left_->pos_, "integer required");
     }
     if(typeid(*right_ty) != typeid(type::IntTy)){
-      //errormsg->Error(right_->pos_, "integer required");
+      errormsg->Error(right_->pos_, "integer required");
     }
   }
   else{
     if(oper_ == absyn::GE_OP || oper_ == absyn::GT_OP
       || oper_ == absyn::LE_OP || oper_ == absyn::LT_OP){
-      if(typeid(*left_ty) != typeid(type::IntTy) || typeid(*left_ty) != typeid(type::StringTy)){
-        //errormsg->Error(left_->pos_, "integer or string required");
-      }
-      if(typeid(*right_ty) != typeid(type::IntTy) || typeid(*right_ty) != typeid(type::StringTy)){
-        //errormsg->Error(right_->pos_, "integer or string required");
-      }
+      // if(typeid(*left_ty) != typeid(type::IntTy) || typeid(*left_ty) != typeid(type::StringTy)){
+      //   errormsg->Error(left_->pos_, "integer or string required");
+      // }
+      // if(typeid(*right_ty) != typeid(type::IntTy) || typeid(*right_ty) != typeid(type::StringTy)){
+      //   errormsg->Error(right_->pos_, "integer or string required");
+      // }
       if(!left_ty->IsSameType(right_ty)){
-        //errormsg->Error(pos_, "same type required");
+        errormsg->Error(pos_, "same type required");
       }
     }
     else{
       if(oper_ == absyn::EQ_OP || oper_ == absyn::NEQ_OP){
-        if(typeid(*left_ty) != typeid(type::IntTy) || typeid(*left_ty) != typeid(type::StringTy)
-        || typeid(*left_ty) != typeid(type::ArrayTy) || typeid(*left_ty) != typeid(type::RecordTy)){
-          //errormsg->Error(left_->pos_, "integer or string or array or record required");
-        }
-        if(typeid(*right_ty) != typeid(type::IntTy) || typeid(*right_ty) != typeid(type::StringTy)
-        || typeid(*right_ty) != typeid(type::ArrayTy) || typeid(*right_ty) != typeid(type::RecordTy)){
-          //errormsg->Error(right_->pos_, "integer or string or array or record required");
-        }
         if(!left_ty->IsSameType(right_ty)){
           if(typeid(*left_ty) == typeid(type::RecordTy) && typeid(*right_ty) == typeid(type::NilTy)){
             
           }
           else{
-            //errormsg->Error(pos_, "same type required");
+            errormsg->Error(pos_, "same type required");
           }
         }
       }
@@ -202,7 +191,7 @@ type::Ty *RecordExp::SemAnalyze(env::VEnvPtr venv, env::TEnvPtr tenv,
   //errormsg->Error(pos_, "begin recordexp");
   type::Ty *typ_ty = tenv->Look(typ_);
   if(!typ_ty){
-    //errormsg->Error(pos_, "undefined type %s", typ_->Name().data());
+    errormsg->Error(pos_, "undefined type %s", typ_->Name().data());
     return type::IntTy::Instance();
   }
   
@@ -240,14 +229,14 @@ type::Ty *AssignExp::SemAnalyze(env::VEnvPtr venv, env::TEnvPtr tenv,
   if(typeid(*var_) == typeid(absyn::SimpleVar)){
     env::EnvEntry *entry = venv->Look(((SimpleVar *)var_)->sym_);
     if(entry->readonly_){
-      //errormsg->Error(pos_, "loop variable can't be assigned");
+      errormsg->Error(pos_, "loop variable can't be assigned");
       return type::IntTy::Instance();
     }
   }
   if(!var_ty->IsSameType(exp_ty)){
-    //errormsg->Error(pos_, "unmatched assign exp");
+    errormsg->Error(pos_, "unmatched assign exp");
   }
-  return var_ty->ActualTy();
+  return type::VoidTy::Instance();
 }
 
 type::Ty *IfExp::SemAnalyze(env::VEnvPtr venv, env::TEnvPtr tenv,
@@ -257,8 +246,8 @@ type::Ty *IfExp::SemAnalyze(env::VEnvPtr venv, env::TEnvPtr tenv,
   type::Ty *test_ty = test_->SemAnalyze(venv, tenv, labelcount, errormsg);
   type::Ty *then_ty = then_->SemAnalyze(venv, tenv, labelcount, errormsg);
   if(typeid(*test_ty) != typeid(type::IntTy)){
-    //errormsg->Error(pos_, "integer required");
-    return type::IntTy::Instance();
+    errormsg->Error(pos_, "integer required");
+    return type::VoidTy::Instance();
   }
   if(elsee_){
     type::Ty *elsee_ty = elsee_->SemAnalyze(venv, tenv, labelcount, errormsg);
@@ -266,14 +255,14 @@ type::Ty *IfExp::SemAnalyze(env::VEnvPtr venv, env::TEnvPtr tenv,
       return then_ty->ActualTy();
     }
     else{
-      //errormsg->Error(pos_, "then exp and else exp type mismatch");
+      errormsg->Error(pos_, "then exp and else exp type mismatch");
       return type::VoidTy::Instance();
     }
   }
   else{
     if(typeid(*then_ty) != typeid(type::VoidTy)){
-      //errormsg->Error(then_->pos_, "if-then exp's body must produce no value");
-      return type::IntTy::Instance();
+      errormsg->Error(then_->pos_, "if-then exp's body must produce no value");
+      return type::VoidTy::Instance();
     }
     return type::VoidTy::Instance();
   }
@@ -287,10 +276,10 @@ type::Ty *WhileExp::SemAnalyze(env::VEnvPtr venv, env::TEnvPtr tenv,
   type::Ty *test_ty = test_->SemAnalyze(venv, tenv, labelcount, errormsg);
   type::Ty *body_ty = body_->SemAnalyze(venv, tenv, labelcount, errormsg);
   if(typeid(*test_ty) != typeid(type::IntTy)){
-    //errormsg->Error(test_->pos_, "should be integer exp!");
+    errormsg->Error(test_->pos_, "should be integer exp!");
   }
   if(typeid(*body_ty) != typeid(type::VoidTy)){
-    //errormsg->Error(body_->pos_, "while body must produce no value");
+    errormsg->Error(body_->pos_, "while body must produce no value");
   }
   isInLoop--;
   return type::VoidTy::Instance();
@@ -304,10 +293,10 @@ type::Ty *ForExp::SemAnalyze(env::VEnvPtr venv, env::TEnvPtr tenv,
   type::Ty *lo_ty = lo_->SemAnalyze(venv, tenv, labelcount, errormsg);
   type::Ty *hi_ty = hi_->SemAnalyze(venv, tenv, labelcount, errormsg);
   if(typeid(*lo_ty) != typeid(type::IntTy)){
-    //errormsg->Error(lo_->pos_, "for exp's range type is not integer");
+    errormsg->Error(lo_->pos_, "for exp's range type is not integer");
   }
   if(typeid(*hi_ty) != typeid(type::IntTy)){
-    //errormsg->Error(hi_->pos_, "for exp's range type is not integer");
+    errormsg->Error(hi_->pos_, "for exp's range type is not integer");
   }
   venv->Enter(var_, new env::VarEntry(lo_ty, true));
   type::Ty *body_ty = body_->SemAnalyze(venv, tenv, labelcount, errormsg);
@@ -320,7 +309,7 @@ type::Ty *BreakExp::SemAnalyze(env::VEnvPtr venv, env::TEnvPtr tenv,
                                int labelcount, err::ErrorMsg *errormsg) const {
   /* TODO: Put your lab4 code here */
   if(!isInLoop){
-    //errormsg->Error(pos_, "break is not inside any loop");
+    errormsg->Error(pos_, "break is not inside any loop");
   }
   return type::VoidTy::Instance();
 }
@@ -351,16 +340,16 @@ type::Ty *ArrayExp::SemAnalyze(env::VEnvPtr venv, env::TEnvPtr tenv,
   type::Ty *size_ty = size_->SemAnalyze(venv, tenv, labelcount, errormsg);
   type::Ty *init_ty = init_->SemAnalyze(venv, tenv, labelcount, errormsg);
   if(!typ_ty){
-    //errormsg->Error(pos_, "%s should be a defined type", typ_->Name().data());
+    errormsg->Error(pos_, "%s should be a defined type", typ_->Name().data());
   }
   if(typeid(*typ_ty) != typeid(type::ArrayTy)){
-    //errormsg->Error(pos_, "%s should be an array type", typ_->Name().data());
+    errormsg->Error(pos_, "%s should be an array type", typ_->Name().data());
   }
   if(typeid(*size_ty) != typeid(type::IntTy)){
-    //errormsg->Error(size_->pos_, "should be an integer");
+    errormsg->Error(size_->pos_, "should be an integer");
   }
   if(!((type::ArrayTy *)typ_ty)->ty_->IsSameType(init_ty)){
-    //errormsg->Error(pos_, "type mismatch");
+    errormsg->Error(pos_, "type mismatch");
   }
   //errormsg->Error(pos_, "end arrayexp");
 
@@ -399,7 +388,7 @@ void FunctionDec::SemAnalyze(env::VEnvPtr venv, env::TEnvPtr tenv,
         count++;
       }
       if(count >= 2){
-        //errormsg->Error(pos_, "two functions have the same name");
+        errormsg->Error(pos_, "two functions have the same name");
         return;
       }
     }
@@ -409,6 +398,7 @@ void FunctionDec::SemAnalyze(env::VEnvPtr venv, env::TEnvPtr tenv,
     auto param_it = (function->params_->GetList()).begin();
     venv->BeginScope();
     for(; param_it != (function->params_->GetList()).end(); param_it++){
+      // errormsg->Error(pos_, " entert the %s", (*param_it)->name_->Name().data());
       venv->Enter((*param_it)->name_, new env::VarEntry(*formal_it));
       formal_it++;
     }
@@ -417,15 +407,12 @@ void FunctionDec::SemAnalyze(env::VEnvPtr venv, env::TEnvPtr tenv,
     env::EnvEntry *fun = venv->Look(function->name_);
     if(((env::FunEntry *)fun)->result_->ActualTy()->IsSameType(type::VoidTy::Instance())){
       if(!ty->IsSameType(type::VoidTy::Instance())){
-        //errormsg->Error(pos_, "procedure returns value");
-      }
-      else{
-        //errormsg->Error(pos_, "did right procedure returns value");
+        errormsg->Error(pos_, "procedure returns value");
       }
     }
-    else{
-      //errormsg->Error(pos_, "should returns value");
-    }
+    // else{
+    //   errormsg->Error(pos_, "should returns value");
+    // }
     venv->EndScope();
   }
   //errormsg->Error(pos_, "end FunctionDec");
@@ -434,12 +421,11 @@ void FunctionDec::SemAnalyze(env::VEnvPtr venv, env::TEnvPtr tenv,
 void VarDec::SemAnalyze(env::VEnvPtr venv, env::TEnvPtr tenv, int labelcount,
                         err::ErrorMsg *errormsg) const {
   /* TODO: Put your lab4 code here */
-  //errormsg->Error(pos_, "begin vardec");
   type::Ty *init_ty = init_->SemAnalyze(venv, tenv, labelcount, errormsg);
   if(typ_){
     type::Ty *typ_ty = tenv->Look(typ_);
     if(!typ_ty){
-      //errormsg->Error(pos_, "undefined type %s", typ_->Name().data());
+      errormsg->Error(pos_, "undefined type %s", typ_->Name().data());
       return;
     }
     if(!typ_ty->IsSameType(init_ty)){
@@ -447,7 +433,7 @@ void VarDec::SemAnalyze(env::VEnvPtr venv, env::TEnvPtr tenv, int labelcount,
         venv->Enter(var_, new env::VarEntry(typ_ty));
       }
       else{
-        //errormsg->Error(pos_, "type mismatch");
+        errormsg->Error(pos_, "type mismatch");
         return;
       }
     }
@@ -457,7 +443,7 @@ void VarDec::SemAnalyze(env::VEnvPtr venv, env::TEnvPtr tenv, int labelcount,
   }
   else{
     if(typeid(*init_ty) == typeid(type::NilTy)){
-      //errormsg->Error(pos_, "init should not be nil without type specified");
+      errormsg->Error(pos_, "init should not be nil without type specified");
       return;
     }
     venv->Enter(var_, new env::VarEntry(init_ty));
@@ -478,7 +464,7 @@ void TypeDec::SemAnalyze(env::VEnvPtr venv, env::TEnvPtr tenv, int labelcount,
         count++;
       }
       if(count >= 2){
-        //errormsg->Error(pos_, "two types have the same name");
+        errormsg->Error(pos_, "two types have the same name");
         return;
       }
     }
@@ -496,7 +482,7 @@ void TypeDec::SemAnalyze(env::VEnvPtr venv, env::TEnvPtr tenv, int labelcount,
     while(typeid(*tmp) == typeid(type::NameTy)){
       tmp = ((type::NameTy *)tmp)->ty_;
       if(((type::NameTy *)tmp) == ((type::NameTy *)name_ty)){
-        //errormsg->Error(pos_, "illegal type cycle");
+        errormsg->Error(pos_, "illegal type cycle");
         return;
       }
     }
@@ -509,7 +495,7 @@ type::Ty *NameTy::SemAnalyze(env::TEnvPtr tenv, err::ErrorMsg *errormsg) const {
   //errormsg->Error(pos_, "begin namety");
   type::Ty *name_ty = tenv->Look(name_);
   if(!name_ty){
-    //errormsg->Error(pos_, "should be defined type");
+    errormsg->Error(pos_, "should be defined type");
     return type::VoidTy::Instance();
   }
   return new type::NameTy(name_, name_ty);
@@ -531,7 +517,7 @@ type::Ty *ArrayTy::SemAnalyze(env::TEnvPtr tenv,
   //errormsg->Error(pos_, "begin arrayty");
   type::Ty *array_ty = tenv->Look(array_);
   if(!array_ty){
-    //errormsg->Error(pos_, "should be defined type!");
+    errormsg->Error(pos_, "should be defined type!");
     return type::VoidTy::Instance();
   }
   return new type::ArrayTy(array_ty);
