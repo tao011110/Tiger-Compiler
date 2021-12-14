@@ -42,6 +42,16 @@ MoveList *MoveList::Intersect(MoveList *list) {
 
 void LiveGraphFactory::LiveMap() {
   /* TODO: Put your lab6 code here */
+
+  while(true){
+    fg::FNodeListPtr nodes = flowgraph_->Nodes();
+    std::list<fg::FNodePtr> node_list = nodes->GetList();
+    for(auto node : node_list){
+      temp::TempList *old_in = in_->Look(node);
+      temp::TempList *old_out = out_->Look(node);
+      
+    }
+  }
 }
 
 void LiveGraphFactory::InterfGraph() {
