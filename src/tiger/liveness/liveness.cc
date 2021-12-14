@@ -6,7 +6,9 @@ namespace live {
 
 temp::TempList *Union(temp::TempList *left, temp::TempList *right){
   auto *res = new temp::TempList();
-  for(auto tmp : left->GetList){}
+  for(auto tmp : left->GetList){
+    
+  }
 }
 
 bool MoveList::Contain(INodePtr src, INodePtr dst) {
