@@ -4,6 +4,11 @@ extern frame::RegManager *reg_manager;
 
 namespace live {
 
+temp::TempList *Union(temp::TempList *left, temp::TempList *right){
+  auto *res = new temp::TempList();
+  for(auto tmp : left->GetList){}
+}
+
 bool MoveList::Contain(INodePtr src, INodePtr dst) {
   return std::any_of(move_list_.cbegin(), move_list_.cend(),
                      [src, dst](std::pair<INodePtr, INodePtr> move) {
@@ -49,7 +54,7 @@ void LiveGraphFactory::LiveMap() {
     for(auto node : node_list){
       temp::TempList *old_in = in_->Look(node);
       temp::TempList *old_out = out_->Look(node);
-      
+
     }
   }
 }
