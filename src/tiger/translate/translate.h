@@ -16,6 +16,8 @@ class Exp;
 class ExpAndTy;
 class Level;
 
+// frame::Frags frags;
+
 class Access {
 public:
   Level *level_;
@@ -23,7 +25,7 @@ public:
 
   Access(Level *level, frame::Access *access)
       : level_(level), access_(access) {}
-  static Access *AllocLocal(Level *level, bool escape);
+  static Access *allocLocal(Level *level, bool escape);
 };
 
 class Level {
@@ -32,11 +34,17 @@ public:
   Level *parent_;
 
   /* TODO: Put your lab5 code here */
+  Level(frame::Frame *frame, Level *parent): frame_(frame), parent_(parent){}
+
 };
 
 class ProgTr {
 public:
-  /* TODO: Put your lab5 code here */ 
+  /* TODO: Put your lab5 code here */
+  ProgTr(std::unique_ptr<absyn::AbsynTree> absyn_tree, std::unique_ptr<err::ErrorMsg> errormsg){
+    absyn_tree_ = std::move(absyn_tree);
+    errormsg_ = std::move(errormsg);
+  }
   /**
    * Translate IR tree
    */
@@ -62,6 +70,10 @@ private:
   void FillBaseVEnv();
   void FillBaseTEnv();
 };
+
+Level *newLevel(Level *parent, temp::Label *name, std::list<bool> formals);
+
+Level *outermost();
 
 } // namespace tr
 

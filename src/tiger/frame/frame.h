@@ -4,6 +4,7 @@
 #include <list>
 #include <memory>
 #include <string>
+#include <vector>
 
 #include "tiger/frame/temp.h"
 #include "tiger/translate/tree.h"
@@ -16,7 +17,7 @@ class RegManager {
 public:
   RegManager() : temp_map_(temp::Map::Empty()) {}
 
-  temp::Temp *GetRegister(int regno) { return regs_[regno]; }
+  virtual temp::Temp *GetRegister(int regno) = 0;
 
   /**
    * Get general-purpose registers except RSI
@@ -71,13 +72,26 @@ protected:
 class Access {
 public:
   /* TODO: Put your lab5 code here */
-  
+  virtual tree::Exp *ToExp(tree::Exp *framePtr) const = 0;
   virtual ~Access() = default;
   
 };
 
 class Frame {
   /* TODO: Put your lab5 code here */
+  public:
+  temp::Label *name;
+  std::list<frame::Access*> formals_;
+  std::list<frame::Access*> locals_;
+  tree::StmList *stms_;
+  int offset;
+
+  virtual Access *allocLocal(bool escape)  = 0;
+  virtual tree::Exp *externalCall(std::string s, tree::ExpList *args)  = 0;
+  virtual tree::Exp *getFramePtr() = 0;
+  virtual std::string GetLabel() = 0;
+  Frame(){}
+  virtual ~Frame(){}
 };
 
 /**
@@ -132,6 +146,13 @@ private:
 };
 
 /* TODO: Put your lab5 code here */
+frame::Frame *newFrame(temp::Label *name, std::list<bool> formals);
+
+tree::Stm *procEntryExit1(frame::Frame *frame, tree::Stm *stm);
+
+assem::InstrList *procEntryExit2(assem::InstrList *body);
+
+assem::Proc *procEntryExit3(frame::Frame *frame, assem::InstrList *body);
 
 } // namespace frame
 
