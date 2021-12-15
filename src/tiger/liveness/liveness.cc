@@ -4,11 +4,40 @@ extern frame::RegManager *reg_manager;
 
 namespace live {
 
-temp::TempList *Union(temp::TempList *left, temp::TempList *right){
-  auto *res = new temp::TempList();
-  for(auto tmp : left->GetList){
-    
+bool Contain(temp::Temp *tmp, temp::TempList *list){
+  for(auto t : list->GetList()){
+    if(t == tmp){
+      return true;
+    }
   }
+  return false;
+}
+
+temp::TempList *Union(temp::TempList *left, temp::TempList *right){
+  temp::TempList *res = new temp::TempList();
+  for(auto tmp : left->GetList()){
+    if(!Contain(tmp, res)){
+      res->Append(tmp);
+    }
+  }
+  for(auto tmp : right->GetList()){
+    if(!Contain(tmp, res)){
+      res->Append(tmp);
+    }
+  }
+
+  return res;
+}
+
+temp::TempList *Sub(temp::TempList *left, temp::TempList *right){
+  temp::TempList *res = new temp::TempList();
+  for(auto tmp : left->GetList()){
+    if(!Contain(tmp, right)){
+      res->Append(tmp);
+    }
+  }
+
+  return res;
 }
 
 bool MoveList::Contain(INodePtr src, INodePtr dst) {
@@ -49,20 +78,30 @@ MoveList *MoveList::Intersect(MoveList *list) {
 
 void LiveGraphFactory::LiveMap() {
   /* TODO: Put your lab6 code here */
-
-  while(true){
+  //P157 algorithm
+  printf("begin livemap\n");
+  bool flag = true;
+  while(flag){
     fg::FNodeListPtr nodes = flowgraph_->Nodes();
     std::list<fg::FNodePtr> node_list = nodes->GetList();
     for(auto node : node_list){
       temp::TempList *old_in = in_->Look(node);
       temp::TempList *old_out = out_->Look(node);
-
+      in_->Set(node, Union(node->NodeInfo()->Use(), Sub(out_->Look(node), node->NodeInfo()->Def())));
+      for(auto succ : (node->Succ())->GetList()){
+        out_->Set(node, Union(out_->Look(node), in_->Look(succ)));
+      }
+      if(!(in_->Look(node) == old_in && out_->Look(node) == old_out)){
+        flag = false;
+      }
     }
   }
+  printf("end livemap\n");
 }
 
 void LiveGraphFactory::InterfGraph() {
   /* TODO: Put your lab6 code here */
+  printf("begin interf graph\n");
 }
 
 void LiveGraphFactory::Liveness() {

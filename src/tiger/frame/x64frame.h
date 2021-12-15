@@ -71,13 +71,13 @@ public:
   temp::Temp *GetRegister(int regno) { return regs_[regno]; }
 
   /**
-   * Get general-purpose registers except RSI
+   * Get general-purpose registers except RSI(should be RSP?)
    * NOTE: returned temp list should be in the order of calling convention
    * @return general-purpose registers
    */
   [[nodiscard]] temp::TempList *Registers(){
     temp::TempList *tempList = new temp::TempList({rax, rbx, rcx, rdx,
-      rdi, rbp, rsp, r8, r9, r10, r11, r12, r13, r14, r15});
+      rdi, rsi, rbp, r8, r9, r10, r11, r12, r13, r14, r15});
 
     return tempList;
   }

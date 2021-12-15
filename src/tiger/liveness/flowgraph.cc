@@ -13,21 +13,26 @@ void FlowGraphFactory::AssemFlowGraph() {
     if(prev){
       flowgraph_->AddEdge(prev, cur);
     }
-    if(((assem::OperInstr *)instr)->jumps_ != nullptr){
-      printf("is jump\n");
-      prev = nullptr;
-      continue;
+    if(typeid(*instr) == typeid(assem::OperInstr)){
+      if(((assem::OperInstr *)instr)->jumps_ != nullptr){
+        printf("is jump\n");
+        prev = nullptr;
+        continue;
+      }
     }
-    if(((assem::LabelInstr *)instr)->label_ != nullptr){
-      printf("is label instr\n");
-      label_map_->Enter(((assem::LabelInstr *)instr)->label_, cur);
+    if(typeid(*instr) == typeid(assem::LabelInstr)){
+      if(((assem::LabelInstr *)instr)->label_ != nullptr){
+        printf("is label instr\n");
+        label_map_->Enter(((assem::LabelInstr *)instr)->label_, cur);
+      }
     }
     prev = cur;
   }
+  
   FNodeListPtr nodes = flowgraph_->Nodes();
   std::list<FNodePtr> node_list = nodes->GetList();
   for(auto node: node_list){
-    assem::Targets *jumps = (((assem::OperInstr *)(node->NodeInfo()))->jumps_;
+    assem::Targets *jumps = ((assem::OperInstr *)(node->NodeInfo()))->jumps_;
     if(jumps != nullptr){
       int size = jumps->labels_->size();
       for(int i = 0; i < size; i++){
