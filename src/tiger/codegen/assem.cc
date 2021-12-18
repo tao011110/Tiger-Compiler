@@ -40,9 +40,6 @@ static std::string Format(std::string_view assem, temp::TempList *dst,
         int n = assem.at(i) - '0';
         std::cout << "src has  " << src->GetList().size() << std::endl;
         std::cout << "src has  " << src->NthTemp(n)->Int() << std::endl;
-        if(!m->Look(src->NthTemp(n))){
-          printf("woccccc!!\n");
-        }
         std::string *s = m->Look(src->NthTemp(n));
         std::cout << *s << std::endl;
         result += *s;
@@ -52,9 +49,6 @@ static std::string Format(std::string_view assem, temp::TempList *dst,
         int n = assem.at(i) - '0';
         std::cout << "dst has  " << dst->GetList().size() << std::endl;
         std::cout << "dst has  " << dst->NthTemp(n)->Int() << std::endl;
-        if(!m->Look(dst->NthTemp(n))){
-          printf("woccccc!!\n");
-        }
         std::string *s = m->Look(dst->NthTemp(n));
         std::cout << *s << std::endl;
         result += *s;
