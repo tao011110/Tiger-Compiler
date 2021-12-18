@@ -9,7 +9,6 @@ void FlowGraphFactory::AssemFlowGraph() {
   std::list<assem::Instr *> il = instr_list_->GetList();
   FNode *prev = nullptr;
   for(auto instr : il){
-    // printf("soso\n");
     FNode *cur = flowgraph_->NewNode(instr);
     if(prev){
       flowgraph_->AddEdge(prev, cur);
@@ -22,13 +21,12 @@ void FlowGraphFactory::AssemFlowGraph() {
     }
     if(typeid(*instr) == typeid(assem::LabelInstr)){
       if(((assem::LabelInstr *)instr)->label_ != nullptr){
-        printf("is label instr %s\n", ((assem::LabelInstr *)instr)->label_->Name().c_str());
+        // printf("is label instr %s\n", ((assem::LabelInstr *)instr)->label_->Name().c_str());
         label_map_->Enter(((assem::LabelInstr *)instr)->label_, cur);
       }
     }
     prev = cur;
   }
-  printf("begin this\n");
   
   FNodeListPtr nodes = flowgraph_->Nodes();
   std::list<FNodePtr> node_list = nodes->GetList();
@@ -45,7 +43,6 @@ void FlowGraphFactory::AssemFlowGraph() {
       }
     }
   }
-  printf("end this\n");
 }
 
 } // namespace fg

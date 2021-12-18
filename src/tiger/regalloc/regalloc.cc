@@ -191,9 +191,6 @@ namespace ra {
             adjSet.insert(std::make_pair(u, v));
             adjSet.insert(std::make_pair(v, u));
             if(!precolored->Contain(u)){
-                // if(!adjList[u]->GetList().size()){
-                //     printf("we not have %d\n", u->NodeInfo()->Int());
-                // }
                 adjList[u]->Append(v);
                 if(!degree[u]){
                     degree[u] = 0;
@@ -202,9 +199,6 @@ namespace ra {
             }
 
             if(!precolored->Contain(v)){
-                // if(!adjList[v]->GetList().size()){
-                //     printf("we not have %d\n", v->NodeInfo()->Int());
-                // }
                 adjList[v]->Append(u);
                 if(!degree[v]){
                     degree[v] = 0;
@@ -477,6 +471,7 @@ namespace ra {
     }
 
     void RegAllocator::AssignColor(){
+        spilledNodes->Clear();
         std::list<live::INodePtr> list = selectStack->GetList();
         printf("adjList size is %d\n", (int)adjList.size());
         auto n = list.end();
@@ -536,34 +531,105 @@ namespace ra {
     }
 
     void RegAllocator::RewriteProgram(){
+        printf("do RewriteProgram\n");
         assem::InstrList *new_instrList = new assem::InstrList();
+        std::vector<int> offset_vec;
         for(auto node : spilledNodes->GetList()){
-            frame_->allocLocal(node->NodeInfo());
+            frame_->allocLocal(true);
+            offset_vec.push_back(frame_->offset);
         }
         assem::InstrList *instr_list = assem_instr_.get()->GetInstrList();
         for(auto il = instr_list->GetList().begin(); il != instr_list->GetList().end(); il++){
-            for(auto node : spilledNodes->GetList()){
-                temp::TempList *def = (*il)->Def();
-                if(live::Contain(node->NodeInfo(), def)){
-                    temp::Temp *t = temp::TempFactory::NewTemp();
-                    std::string instr = std::string("movq `s0, (") + frame_->name->Name() + std::string("_framesize-") + 
-                        std::to_string(-frame_->offset) + std::string(")(`s0)");
-                    new_instrList->Append(new assem::OperInstr(instr, new temp::TempList(reg_manager->StackPointer()),
-                        new temp::TempList(t), nullptr));
-                }
-            }
-
-            new_instrList->Append(*il);
-
+            int i = 0;
+            assem::InstrList *temp_instrList = new assem::InstrList();
             for(auto node : spilledNodes->GetList()){
                 temp::TempList *use = (*il)->Use();
                 if(live::Contain(node->NodeInfo(), use)){
                     temp::Temp *t = temp::TempFactory::NewTemp();
                     std::string instr = std::string("movq (") + frame_->name->Name() + std::string("_framesize-") + 
-                        std::to_string(-frame_->offset) + std::string(")(`s0), `d0");
-                    new_instrList->Append(new assem::OperInstr(instr, new temp::TempList(t), 
-                        new temp::TempList(reg_manager->StackPointer()), nullptr));
+                        std::to_string(-(offset_vec[i])) + std::string(")(`s0), `d0");
+                    // insert before il
+                    new_instrList->Append(new assem::OperInstr(instr, new temp::TempList(reg_manager->StackPointer()),
+                        new temp::TempList(t), nullptr));
+                    printf("add in %s\n", instr.c_str());
+
+                    if(typeid(*(*il)) == typeid(assem::MoveInstr)){
+                        temp::TempList *src_list = ((assem::MoveInstr*)(*il))->src_;
+                        temp::TempList *src_list_new = new temp::TempList();
+                        for(auto src : src_list->GetList()){
+                            if(src->Int() == node->NodeInfo()->Int()){
+                                src_list_new->Append(t);
+                                continue;
+                            }
+                            src_list_new->Append(src);
+                        }
+                        ((assem::MoveInstr*)(*il))->src_ = src_list_new;
+                    }
+                    else{
+                        if(typeid(*(*il)) == typeid(assem::OperInstr)){
+                            temp::TempList *src_list = ((assem::OperInstr*)(*il))->src_;
+                            temp::TempList *src_list_new = new temp::TempList();
+                            for(auto src : src_list->GetList()){
+                                if(src->Int() == node->NodeInfo()->Int()){
+                                    src_list_new->Append(t);
+                                    continue;
+                                }
+                                src_list_new->Append(src);
+                            }
+                            ((assem::OperInstr*)(*il))->src_ = src_list_new;
+                        }
+                    }
                 }
+                i++;
+            }
+
+            i = 0;
+            for(auto node : spilledNodes->GetList()){
+                temp::TempList *def = (*il)->Def();
+                if(live::Contain(node->NodeInfo(), def)){
+                    temp::Temp *t = temp::TempFactory::NewTemp();
+                    std::string instr = std::string("movq `s0, (") + frame_->name->Name() + std::string("_framesize-") + 
+                        std::to_string(-(offset_vec[i])) + std::string(")(`d0)");
+                    temp_instrList->Append(new assem::OperInstr(instr, new temp::TempList(t), 
+                        new temp::TempList(reg_manager->StackPointer()), nullptr));
+                    printf("add in %s\n", instr.c_str());
+
+                    if(typeid(*(*il)) == typeid(assem::MoveInstr)){
+                        temp::TempList *dst_list = ((assem::MoveInstr*)(*il))->dst_;
+                        temp::TempList *dst_list_new = new temp::TempList();
+                        for(auto dst : dst_list->GetList()){
+                            if(dst->Int() == node->NodeInfo()->Int()){
+                                dst_list_new->Append(t);
+                                continue;
+                            }
+                            dst_list_new->Append(dst);
+                        }
+                        ((assem::MoveInstr*)(*il))->dst_ = dst_list_new;
+                    }
+                    else{
+                        if(typeid(*(*il)) == typeid(assem::OperInstr)){
+                            temp::TempList *dst_list = ((assem::OperInstr*)(*il))->dst_;
+                            temp::TempList *dst_list_new = new temp::TempList();
+                            for(auto dst : dst_list->GetList()){
+                                if(dst->Int() == node->NodeInfo()->Int()){
+                                    dst_list_new->Append(t);
+                                    continue;
+                                }
+                                dst_list_new->Append(dst);
+                            }
+                            ((assem::OperInstr*)(*il))->dst_ = dst_list_new;
+                        }
+                    }
+                }
+                i++;
+            }
+
+            // insert il
+            new_instrList->Append(*il);
+
+            // insert after il
+            for(auto instr : temp_instrList->GetList()){
+                new_instrList->Append(instr);
             }
         }
         
@@ -613,6 +679,7 @@ namespace ra {
         AssignColor();
         if(!spilledNodes->GetList().empty()){
             RewriteProgram();
+            
             precolored->Clear();
             initial->Clear();
 
@@ -657,8 +724,28 @@ namespace ra {
                 printf("first %d and second %d\n", tmp.first->Int(), tmp.second->Int());
             }
             printf("make result\n"); 
+            for(auto il : assem_instr_.get()->GetInstrList()->GetList()){
+                if(typeid(*il) == typeid(assem::OperInstr)){
+                    printf("%s\n", ((assem::OperInstr*)(il))->assem_.c_str());
+                }
+            }
+            simplifyInstrList();
             result = std::make_unique<ra::Result>(map, assem_instr_.get()->GetInstrList());
         }
+    }
+
+    void RegAllocator::simplifyInstrList(){
+        assem::InstrList *instr_list = assem_instr_.get()->GetInstrList();
+        assem::InstrList *instr_list_new = new assem::InstrList();
+        for(auto il : instr_list->GetList()){
+            if(typeid(*il) == typeid(assem::MoveInstr)){
+                if(((assem::MoveInstr*)il)->dst_ == ((assem::MoveInstr*)il)->src_){
+                    continue;
+                }
+            }
+            instr_list_new->Append(il);
+        }
+        assem_instr_ = std::make_unique<cg::AssemInstr>(instr_list_new);
     }
 
 } // namespace ra

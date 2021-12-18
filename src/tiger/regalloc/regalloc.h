@@ -94,6 +94,7 @@ class RegAllocator {
     void SelectSpill();
     void AssignColor();
     void RewriteProgram();
+    void simplifyInstrList();
 };
 
 } // namespace ra
