@@ -549,11 +549,12 @@ namespace ra {
                     std::string instr = std::string("movq (") + frame_->name->Name() + std::string("_framesize-") + 
                         std::to_string(-(offset_vec[i])) + std::string(")(`s0), `d0");
                     // insert before il
-                    new_instrList->Append(new assem::OperInstr(instr, new temp::TempList(reg_manager->StackPointer()),
-                        new temp::TempList(t), nullptr));
+                    new_instrList->Append(new assem::OperInstr(instr, new temp::TempList(t), 
+                    new temp::TempList(reg_manager->StackPointer()), nullptr));
                     printf("add in %s\n", instr.c_str());
 
                     if(typeid(*(*il)) == typeid(assem::MoveInstr)){
+                        printf("the dup assem is %s\n", ((assem::MoveInstr*)(*il))->assem_.c_str());
                         temp::TempList *src_list = ((assem::MoveInstr*)(*il))->src_;
                         temp::TempList *src_list_new = new temp::TempList();
                         for(auto src : src_list->GetList()){
@@ -567,6 +568,7 @@ namespace ra {
                     }
                     else{
                         if(typeid(*(*il)) == typeid(assem::OperInstr)){
+                            printf("the dup assem is %s\n", ((assem::OperInstr*)(*il))->assem_.c_str());
                             temp::TempList *src_list = ((assem::OperInstr*)(*il))->src_;
                             temp::TempList *src_list_new = new temp::TempList();
                             for(auto src : src_list->GetList()){
@@ -579,6 +581,8 @@ namespace ra {
                             ((assem::OperInstr*)(*il))->src_ = src_list_new;
                         }
                     }
+                    printf("the spill is %d\n", node->NodeInfo()->Int());
+                    printf("the new t is %d\n", t->Int());
                 }
                 i++;
             }
@@ -590,8 +594,8 @@ namespace ra {
                     temp::Temp *t = temp::TempFactory::NewTemp();
                     std::string instr = std::string("movq `s0, (") + frame_->name->Name() + std::string("_framesize-") + 
                         std::to_string(-(offset_vec[i])) + std::string(")(`d0)");
-                    temp_instrList->Append(new assem::OperInstr(instr, new temp::TempList(t), 
-                        new temp::TempList(reg_manager->StackPointer()), nullptr));
+                    temp_instrList->Append(new assem::OperInstr(instr, new temp::TempList(reg_manager->StackPointer()),
+                        new temp::TempList(t), nullptr));
                     printf("add in %s\n", instr.c_str());
 
                     if(typeid(*(*il)) == typeid(assem::MoveInstr)){
