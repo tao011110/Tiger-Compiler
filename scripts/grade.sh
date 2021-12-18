@@ -230,9 +230,12 @@ test_lab6() {
     testcase_name=$(basename "$testcase" | cut -f1 -d".")
     local ref=${ref_dir}/${testcase_name}.out
     local assem=$testcase.s
-
+    rm -f "$testcase_dir"/*.tig.s
+    echo "wuhu111"
     ./tiger-compiler "$testcase" &>/dev/null
+    echo "wuhu222"
     gcc -Wl,--wrap,getchar -m64 "$assem" "$runtime_path" -o test.out &>/dev/null
+    echo "wuhu"
     if [ ! -s test.out ]; then
       echo "Error: Link error [$testcase_name]"
       full_score=0
@@ -265,7 +268,7 @@ test_lab6() {
       score=$((score + 5))
     fi
   done
-  rm -f "$testcase_dir"/*.tig.s
+  # rm -f "$testcase_dir"/*.tig.s
 
   if [[ $full_score == 0 ]]; then
     echo "${score_str}: ${score}"

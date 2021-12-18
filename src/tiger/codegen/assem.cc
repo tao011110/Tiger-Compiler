@@ -1,6 +1,7 @@
 #include "tiger/codegen/assem.h"
 
 #include <cassert>
+#include <iostream>
 
 namespace temp {
 
@@ -27,21 +28,35 @@ namespace assem {
 static std::string Format(std::string_view assem, temp::TempList *dst,
                           temp::TempList *src, Targets *jumps, temp::Map *m) {
   std::string result;
+  printf("assem is %s\n", (std::string(assem)).c_str());
   for (std::string::size_type i = 0; i < assem.size(); i++) {
     char ch = assem.at(i);
+    std::cout << "ch is  "<< ch << std::endl;
     if (ch == '`') {
       i++;
       switch (assem.at(i)) {
       case 's': {
         i++;
         int n = assem.at(i) - '0';
+        std::cout << "src has  " << src->GetList().size() << std::endl;
+        std::cout << "src has  " << src->NthTemp(n)->Int() << std::endl;
+        if(!m->Look(src->NthTemp(n))){
+          printf("woccccc!!\n");
+        }
         std::string *s = m->Look(src->NthTemp(n));
+        std::cout << *s << std::endl;
         result += *s;
       } break;
       case 'd': {
         i++;
         int n = assem.at(i) - '0';
+        std::cout << "dst has  " << dst->GetList().size() << std::endl;
+        std::cout << "dst has  " << dst->NthTemp(n)->Int() << std::endl;
+        if(!m->Look(dst->NthTemp(n))){
+          printf("woccccc!!\n");
+        }
         std::string *s = m->Look(dst->NthTemp(n));
+        std::cout << *s << std::endl;
         result += *s;
       } break;
       case 'j': {

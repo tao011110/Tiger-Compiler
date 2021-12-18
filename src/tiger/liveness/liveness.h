@@ -55,6 +55,8 @@ public:
   void Liveness();
   LiveGraph GetLiveGraph() { return live_graph_; }
   tab::Table<temp::Temp, INode> *GetTempNodeMap() { return temp_node_map_; }
+  INode *getNode(temp::Temp *);
+  bool isSame(temp::TempList *left, temp::TempList *right);
 
 private:
   fg::FGraphPtr flowgraph_;
@@ -67,6 +69,8 @@ private:
   void LiveMap();
   void InterfGraph();
 };
+
+bool Contain(temp::Temp *tmp, temp::TempList *list);
 
 } // namespace live
 

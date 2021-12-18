@@ -65,8 +65,10 @@ std::string *Map::Look(Temp *t) {
   s = tab_->Look(t);
   if (s)
     return s;
-  else if (under_)
+  else if (under_){
+    printf("we are at under\n");
     return under_->Look(t);
+  }
   else
     return nullptr;
 }
