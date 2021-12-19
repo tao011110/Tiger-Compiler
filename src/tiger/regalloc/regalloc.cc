@@ -403,7 +403,7 @@ namespace ra {
         }
         coalescedNodes->Append(v);
         alias[v] = u;
-        moveList[u]->Union(moveList[v]);
+        moveList[u] = moveList[u]->Union(moveList[v]);
         live::INodeListPtr v_list = new live::INodeList();
         v_list->Append(v);
         EnableMoves(v_list);
@@ -424,8 +424,8 @@ namespace ra {
         }
         auto u = freezeWorklist->GetList().begin();
         freezeWorklist->DeleteNode(*u);
-                printf("Freeze\n");
-                printf("simplyWorklist->Append(node) %d\n", (*u)->NodeInfo()->Int());
+        printf("Freeze\n");
+        printf("simplyWorklist->Append(node) %d\n", (*u)->NodeInfo()->Int());
         simplyWorklist->Append(*u);
         FreezeMoves(*u);
     }
@@ -523,6 +523,7 @@ namespace ra {
                 // printf("\n");
             }
         }
+        selectStack->Clear();
 
         for(auto n : coalescedNodes->GetList()){
             printf("coalescedNode %d  and  %d\n", n->NodeInfo()->Int(), GetAlias(n)->NodeInfo()->Int());
