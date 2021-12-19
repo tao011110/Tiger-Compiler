@@ -133,22 +133,14 @@ void LiveGraphFactory::LiveMap() {
       temp::TempList *new_in = Union(node->NodeInfo()->Use(), Sub(out_.get()->Look(node), node->NodeInfo()->Def()));
 
       in_.get()->Set(node, new_in);
-      // printf("why %d but %d\n", int(in_.get()->Look(node)->GetList().size()), int(new_in->GetList().size()));
-      // printf("woc %d\n", int(old_in->GetList().size()));
 
       for(auto succ : (node->Succ())->GetList()){
         out_.get()->Set(node, Union(out_.get()->Look(node), in_.get()->Look(succ)));
       }
-      // if(!out_.get()->Look(node)){
-      //   printf("new out is null\n");
-      // }
       if(!(isSame(in_.get()->Look(node), old_in) && isSame(out_.get()->Look(node), old_out))){
         // printf("yes?\n");
         flag = true;
       }
-      // else{
-      //   printf("no?\n");
-      // }
     }
   }
   printf("end livemap\n");

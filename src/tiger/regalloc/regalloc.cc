@@ -13,9 +13,9 @@ namespace ra {
 
     RegAllocator::RegAllocator(frame::Frame *frame, std::unique_ptr<cg::AssemInstr> assem_instr)
       : frame_(frame), assem_instr_(std::move(assem_instr)) {
-        fg::FlowGraphFactory *flowGraph = new fg::FlowGraphFactory(assem_instr_.get()->GetInstrList());
-        flowGraph->AssemFlowGraph();
-        liveGraph = new live::LiveGraphFactory(flowGraph->GetFlowGraph());
+        // fg::FlowGraphFactory *flowGraph = new fg::FlowGraphFactory(assem_instr_.get()->GetInstrList());
+        // flowGraph->AssemFlowGraph();
+        // liveGraph = new live::LiveGraphFactory(flowGraph->GetFlowGraph());
 
         // init these
         precolored = new live::INodeList();
@@ -141,7 +141,7 @@ namespace ra {
             if(!dst_list){
                dst_list = new live::MoveList();
             }
-            dst_list->Append(dst, dst);
+            dst_list->Append(src, dst);
             moveList[dst] = dst_list;
         }
         worklistMoves = liveGraph->GetLiveGraph().moves;
@@ -228,6 +228,7 @@ namespace ra {
                 }
             }
         }
+        printf("spillWorklist.size is %d\n", int(spillWorklist->GetList().size()));
         initial->Clear();
     }
 
@@ -274,6 +275,7 @@ namespace ra {
             EnableMoves(list);
             spillWorklist->DeleteNode(node);
             if(MoveRelated(node)){
+                printf("freezeWorklist->Append(node) %d\n", node->NodeInfo()->Int());
                 freezeWorklist->Append(node);
             }
             else{
@@ -396,6 +398,7 @@ namespace ra {
     void RegAllocator::Combine(live::INodePtr u, live::INodePtr v){
         if(freezeWorklist->Contain(v)){
             freezeWorklist->DeleteNode(v);
+            printf("at combine freezeWorklist->DeleteNode(v) %d\n", v->NodeInfo()->Int());
         }
         else{
             spillWorklist->DeleteNode(v);
@@ -465,6 +468,7 @@ namespace ra {
                 }
             }
         }
+        printf("spillWorklist delete %d\n", m->NodeInfo()->Int());
         spillWorklist->DeleteNode(m);
         simplyWorklist->Append(m);
         FreezeMoves(m);
@@ -473,7 +477,7 @@ namespace ra {
     void RegAllocator::AssignColor(){
         spilledNodes->Clear();
         std::list<live::INodePtr> list = selectStack->GetList();
-        printf("adjList size is %d\n", (int)adjList.size());
+        printf("selectStack size is %d\n", (int)selectStack->GetList().size());
         auto n = list.end();
         while(n != list.begin()){
             n--;
@@ -662,7 +666,7 @@ namespace ra {
         MakeWorkList();
         
         do{
-            if(!simplyWorklist->GetList().empty()){
+            if(!(simplyWorklist->GetList().empty())){
                 printf("do Simplify\n");
                 Simplify();
             }
@@ -674,7 +678,7 @@ namespace ra {
                 printf("do Freeze\n");
                 Freeze();
             }
-            if(!spilledNodes->GetList().empty()){
+            if(!spillWorklist->GetList().empty()){
                 printf("do SelectSpill\n");
                 SelectSpill();
             }

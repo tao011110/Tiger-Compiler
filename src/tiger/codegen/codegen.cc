@@ -251,6 +251,14 @@ temp::Temp *CallExp::Munch(assem::InstrList &instr_list, std::string_view fs) {
   temp::TempList *alloced_args = args_->MunchArgs(instr_list, fs);
   std::string instr_str = std::string("call ") + ((tree::NameExp*)fun_)->name_->Name();
 
+  //save caller-saved regs
+  std::vector<temp::Temp *> tmp_store;
+  for(auto reg: reg_manager->CallerSaves()->GetList()){
+    temp::Temp *tmp = temp::TempFactory::NewTemp();
+    tmp_store.push_back(tmp);
+    instr_list.Append(new assem::MoveInstr(std::string("movq `s0, `d0"), new temp::TempList(tmp), new temp::TempList(reg)));
+  }
+
   instr_list.Append(new assem::OperInstr(instr_str, reg_manager->CallerSaves(), alloced_args, nullptr));
   instr_list.Append(new assem::MoveInstr(std::string("movq `s0, `d0"), 
     new temp::TempList(ret), new temp::TempList(reg_manager->ReturnValue())));
@@ -261,6 +269,14 @@ temp::Temp *CallExp::Munch(assem::InstrList &instr_list, std::string_view fs) {
   if(reg_num < args_num){
     std::string instr = std::string("addq $") + std::to_string((args_num - reg_num) * reg_manager->WordSize()) + std::string(", `d0");
     instr_list.Append(new assem::OperInstr(instr, new temp::TempList(reg_manager->StackPointer()), nullptr, nullptr));
+  }
+
+
+  // restore save caller-saved regs
+  int i = 0;
+  for(auto reg: reg_manager->CallerSaves()->GetList()){
+    instr_list.Append(new assem::MoveInstr(std::string("movq `s0, `d0"), new temp::TempList(reg), new temp::TempList(tmp_store[i])));
+    i++;
   }
 
   return ret;
