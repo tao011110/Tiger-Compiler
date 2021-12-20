@@ -154,7 +154,6 @@ INode *LiveGraphFactory::getNode(temp::Temp *temp){
 void LiveGraphFactory::InterfGraph() {
   /* TODO: Put your lab6 code here */
   printf("begin interf graph\n");
-  //TODO 
   for(auto temp : reg_manager->Registers()->GetList()){
     auto node = live_graph_.interf_graph->NewNode(temp);
     temp_node_map_->Enter(node->NodeInfo(), node);

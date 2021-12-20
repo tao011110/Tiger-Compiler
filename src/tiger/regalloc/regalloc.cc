@@ -101,7 +101,7 @@ namespace ra {
 
     live::MoveList *RegAllocator::Union(live::MoveList *left, live::MoveList *right){
         live::MoveList *result = new live::MoveList();
-        printf("111\n");
+        printf("do union\n");
         for(auto l : left->GetList()){
             if(!Contain(l, result)){
                 result->Append(l.first, l.second);
@@ -127,7 +127,6 @@ namespace ra {
         return result;
     }
 
-    //TODO: must with something wrong!
     void RegAllocator::Build(){
         for(auto tmp : liveGraph->GetLiveGraph().moves->GetList()){
             live::INodePtr src = tmp.first;
@@ -677,7 +676,6 @@ namespace ra {
         // coalescedNodes->Clear();
     }
 
-    //TODO: NOT OK!
     void RegAllocator::RegAlloc(){
         time++;
         printf("do RegAlloc\n");

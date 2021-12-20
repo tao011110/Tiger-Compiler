@@ -122,7 +122,7 @@ public:
   [[nodiscard]] temp::TempList *ReturnSink(){
     // temp::TempList *tempList = CalleeSaves();
     temp::TempList *tempList = new temp::TempList();
-    tempList->Append(StackPointer());
+    // tempList->Append(StackPointer());
     tempList->Append(ReturnValue());
 
     return tempList;
