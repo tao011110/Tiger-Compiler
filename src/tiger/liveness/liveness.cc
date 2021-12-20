@@ -165,7 +165,7 @@ void LiveGraphFactory::InterfGraph() {
         auto m = getNode(temp1);
         auto n = getNode(temp2);
         live_graph_.interf_graph->AddEdge(m, n);
-        // live_graph_.interf_graph->AddEdge(n, m);
+        live_graph_.interf_graph->AddEdge(n, m);
       }
     }
   }

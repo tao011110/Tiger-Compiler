@@ -18,6 +18,7 @@ namespace ra {
         // liveGraph = new live::LiveGraphFactory(flowGraph->GetFlowGraph());
 
         // init these
+        printf("begin RegAllocator\n");
         precolored = new live::INodeList();
         initial = new live::INodeList();
 
@@ -323,11 +324,16 @@ namespace ra {
         }
         worklistMoves->Delete((*m).first, (*m).second);
         if(u == v){
-            coalescedMoves->Append((*m).first, (*m).second);
+            if(!coalescedMoves->Contain((*m).first, (*m).second)){
+                coalescedMoves->Append((*m).first, (*m).second);
+            }
             addWorkList(u);
         }
         else{
             if(precolored->Contain(v) || adjSet.find(std::make_pair(u, v)) != adjSet.end()){
+                if(!constrainedMoves->Contain((*m).first, (*m).second)){
+                   constrainedMoves->Append((*m).first, (*m).second);
+                }
                 constrainedMoves->Append((*m).first, (*m).second);
                 addWorkList(u);
                 addWorkList(v);
@@ -343,12 +349,16 @@ namespace ra {
 
                 if(precolored->Contain(u) && flag 
                     || !precolored->Contain(u) && Conservertive(Adjacent(u)->Union(Adjacent(v)))){
-                        coalescedMoves->Append((*m).first, (*m).second);
+                        if(!coalescedMoves->Contain((*m).first, (*m).second)){
+                            coalescedMoves->Append((*m).first, (*m).second);
+                        }
                         Combine(u, v);
                         addWorkList(u);
                 }
                 else{
-                    activeMoves->Append((*m).first, (*m).second);
+                    if(!activeMoves->Contain((*m).first, (*m).second)){
+                        activeMoves->Append((*m).first, (*m).second);
+                    }
                 }
             }
         }
@@ -412,6 +422,7 @@ namespace ra {
         EnableMoves(v_list);
         for(auto t : Adjacent(v)->GetList()){
             AddEdge(t, u);
+            AddEdge(u, t);
             DecrementDegree(t);
         }
         if(degree[u] >= reg_manager->Registers()->GetList().size() && freezeWorklist->Contain(u)){
@@ -445,7 +456,9 @@ namespace ra {
                 v = GetAlias(y);
             }
             activeMoves->Delete(m.first, m.second);
-            frozenMoves->Append(m.first, m.second);
+            if(!frozenMoves->Contain(m.first, m.second)){
+                frozenMoves->Append(m.first, m.second);
+            }
             if(NodeMoves(v)->GetList().empty() && degree[v] < reg_manager->Registers()->GetList().size()){
                 freezeWorklist->DeleteNode(v);
                 printf("FreezeMoves\n");
@@ -460,6 +473,10 @@ namespace ra {
         live::INodePtr m = *(spillWorklist->GetList().begin());
         int max_degree = degree[m];
         for(auto tmp : spillWorklist->GetList()){
+            // don't spill new temp reg
+            if(notSpill.find(tmp->NodeInfo()) != notSpill.end()){
+                continue;
+            }
             if(!spilledNodes->Contain(tmp) && !precolored->Contain(tmp)){
                 int d = degree.find(tmp)->second;
                 if(d >= max_degree){
@@ -515,10 +532,11 @@ namespace ra {
             }
             else{
                 coloredNodes->Append(*n);
-                auto c = okColors.begin();
-                color[(*n)->NodeInfo()] = *c;
+                // be careful with the back!!!!
+                auto c = okColors.back();
+                color[(*n)->NodeInfo()] = c;
                 printf("first is %d\n", (*n)->NodeInfo()->Int());
-                printf("second is %d\n", (*c)->Int());
+                printf("second is %d\n", c->Int());
                 // printf("color size is %d\n", (int)color.size());
                 // printf("\n");
                 // for(auto tmp : color){
@@ -547,10 +565,13 @@ namespace ra {
         for(auto il = instr_list->GetList().begin(); il != instr_list->GetList().end(); il++){
             int i = 0;
             assem::InstrList *temp_instrList = new assem::InstrList();
+            std::vector<temp::Temp *> node_temp_vec;
             for(auto node : spilledNodes->GetList()){
                 temp::TempList *use = (*il)->Use();
                 if(live::Contain(node->NodeInfo(), use)){
                     temp::Temp *t = temp::TempFactory::NewTemp();
+                    node_temp_vec.push_back(t);
+                    notSpill.insert(t);
                     std::string instr = std::string("movq (") + frame_->name->Name() + std::string("_framesize-") + 
                         std::to_string(-(offset_vec[i])) + std::string(")(`s0), `d0");
                     // insert before il
@@ -589,6 +610,9 @@ namespace ra {
                     printf("the spill is %d\n", node->NodeInfo()->Int());
                     printf("the new t is %d\n", t->Int());
                 }
+                else{
+                    node_temp_vec.push_back(nullptr);
+                }
                 i++;
             }
 
@@ -596,7 +620,11 @@ namespace ra {
             for(auto node : spilledNodes->GetList()){
                 temp::TempList *def = (*il)->Def();
                 if(live::Contain(node->NodeInfo(), def)){
-                    temp::Temp *t = temp::TempFactory::NewTemp();
+                    temp::Temp *t = node_temp_vec[i];
+                    if(!t){
+                        t = temp::TempFactory::NewTemp();
+                        notSpill.insert(t);
+                    }
                     std::string instr = std::string("movq `s0, (") + frame_->name->Name() + std::string("_framesize-") + 
                         std::to_string(-(offset_vec[i])) + std::string(")(`d0)");
                     temp_instrList->Append(new assem::OperInstr(instr, new temp::TempList(reg_manager->StackPointer()),
@@ -651,6 +679,7 @@ namespace ra {
 
     //TODO: NOT OK!
     void RegAllocator::RegAlloc(){
+        time++;
         printf("do RegAlloc\n");
         fg::FlowGraphFactory *flowGraph = new fg::FlowGraphFactory(assem_instr_.get()->GetInstrList());
         flowGraph->AssemFlowGraph();
@@ -680,13 +709,14 @@ namespace ra {
             }
             if(!spillWorklist->GetList().empty()){
                 printf("do SelectSpill\n");
+                printf("spillWorklist size is %d \n", (int)(spillWorklist->GetList().size()));
                 SelectSpill();
             }
         } while(!simplyWorklist->GetList().empty() || !worklistMoves->GetList().empty()
             ||!freezeWorklist->GetList().empty() || !spilledNodes->GetList().empty());
 
         AssignColor();
-        if(!spilledNodes->GetList().empty()){
+        if(!spilledNodes->GetList().empty() && time < 8){
             RewriteProgram();
             
             precolored->Clear();

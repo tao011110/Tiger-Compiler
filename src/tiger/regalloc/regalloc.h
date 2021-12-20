@@ -33,6 +33,7 @@ class RegAllocator {
     std::unique_ptr<cg::AssemInstr> assem_instr_;
     std::unique_ptr<ra::Result> result;
     live::LiveGraphFactory *liveGraph;
+    int time = 0;
 
   public:
     RegAllocator(frame::Frame *frame, std::unique_ptr<cg::AssemInstr> assem_instr);
@@ -64,6 +65,7 @@ class RegAllocator {
     std::map<live::INodePtr, live::MoveList *> moveList;
     std::map<live::INodePtr, live::INodePtr> alias;
     std::map<temp::Temp*, temp::Temp*> color;
+    std::set<temp::Temp*> notSpill;
 
   public:
     live::INodeListPtr Union(live::INodeListPtr left, live::INodeListPtr right);
