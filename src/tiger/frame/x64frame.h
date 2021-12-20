@@ -118,9 +118,10 @@ public:
    * Get return-sink registers
    * @return return-sink registers
    */
-  //TODO: not finish in lab5-part1 here
+  //TODO: we modify this?
   [[nodiscard]] temp::TempList *ReturnSink(){
-    temp::TempList *tempList = CalleeSaves();
+    // temp::TempList *tempList = CalleeSaves();
+    temp::TempList *tempList = new temp::TempList();
     tempList->Append(StackPointer());
     tempList->Append(ReturnValue());
 

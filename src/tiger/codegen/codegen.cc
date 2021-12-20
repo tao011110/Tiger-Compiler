@@ -41,6 +41,10 @@ void CodeGen::Codegen() {
 
   assem_instr_ = std::make_unique<AssemInstr>(instr_list);
   frame::procEntryExit2(assem_instr_->GetInstrList());
+  assem::InstrList *tmp_list = frame::procEntryExit2(assem_instr_->GetInstrList());
+  // for(auto il : tmp_list->GetList()){
+  //   instr_list->Append(il);
+  // }
 }
 
 void AssemInstr::Print(FILE *out, temp::Map *map) const {

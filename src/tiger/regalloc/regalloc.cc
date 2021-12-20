@@ -462,7 +462,7 @@ namespace ra {
         for(auto tmp : spillWorklist->GetList()){
             if(!spilledNodes->Contain(tmp) && !precolored->Contain(tmp)){
                 int d = degree.find(tmp)->second;
-                if(d > max_degree){
+                if(d >= max_degree){
                     m = tmp;
                     max_degree = d;
                 }
