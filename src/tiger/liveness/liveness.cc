@@ -69,18 +69,13 @@ void MoveList::Delete(INodePtr src, INodePtr dst) {
 
 MoveList *MoveList::Union(MoveList *list) {
   auto *res = new MoveList();
-  // printf("1111\n");
   for (auto move : move_list_) {
-  // printf("122\n");
     res->move_list_.push_back(move);
   }
-  // printf("222\n");
   for (auto move : list->GetList()) {
-  // printf("2333\n");
     if (!res->Contain(move.first, move.second))
       res->move_list_.push_back(move);
   }
-  // printf("3333\n");
   return res;
 }
 
@@ -148,25 +143,29 @@ void LiveGraphFactory::LiveMap() {
 
 INode *LiveGraphFactory::getNode(temp::Temp *temp){
   // printf("try to get %d\n", temp->Int());
-  for(auto *node : live_graph_.interf_graph->Nodes()->GetList()){
-    if(node->NodeInfo() == temp){
-      return node;
-    }
+  if(!temp_node_map_->Look(temp)){
+    live::INodePtr node = live_graph_.interf_graph->NewNode(temp);
+    temp_node_map_->Enter(temp, node);
+    return node;
   }
-  return live_graph_.interf_graph->NewNode(temp);
+  return temp_node_map_->Look(temp);
 }
 
 void LiveGraphFactory::InterfGraph() {
   /* TODO: Put your lab6 code here */
   printf("begin interf graph\n");
   //TODO 
+  for(auto temp : reg_manager->Registers()->GetList()){
+    auto node = live_graph_.interf_graph->NewNode(temp);
+    temp_node_map_->Enter(node->NodeInfo(), node);
+  }
   for(auto *temp1 : reg_manager->Registers()->GetList()){
     for(auto *temp2 : reg_manager->Registers()->GetList()){
-      auto m = getNode(temp1);
-      auto n = getNode(temp2);
-      if(m != n){
+      if(temp1 != temp2){
+        auto m = getNode(temp1);
+        auto n = getNode(temp2);
         live_graph_.interf_graph->AddEdge(m, n);
-        live_graph_.interf_graph->AddEdge(n, m);
+        // live_graph_.interf_graph->AddEdge(n, m);
       }
     }
   }
@@ -178,22 +177,25 @@ void LiveGraphFactory::InterfGraph() {
     temp::TempList *use = node->NodeInfo()->Use();
     if(typeid(*(node->NodeInfo())) == typeid(assem::MoveInstr)){
       printf("node MoveInstr assem is %s\n", ((assem::MoveInstr*)(node->NodeInfo()))->assem_.c_str());
-      if(use->GetList().size() == 0 || def->GetList().size() == 0){
-        continue;
-      }
-      auto src = getNode(*(use->GetList().begin()));
-      auto dst = getNode(*(def->GetList().begin()));
-      live_graph_.moves->Append(src, dst);
-      if(out_->Look(node)){
+      for(auto d : def->GetList()){
         auto temp_list = out_->Look(node)->GetList();
         for(auto temp : temp_list){
-          if(temp == *(use->GetList().begin())){
+          if(Contain(temp, use)){
             continue;
           }
-          auto out = getNode(temp);
-          if(dst != out){
-            live_graph_.interf_graph->AddEdge(dst, out);
-            live_graph_.interf_graph->AddEdge(out, dst);
+          if(d == reg_manager->StackPointer() || temp == reg_manager->StackPointer()){
+            continue;
+          }
+          live_graph_.interf_graph->AddEdge(getNode(d), getNode(temp));
+          live_graph_.interf_graph->AddEdge(getNode(temp), getNode(d));
+        }
+
+        for(auto u : use->GetList()){
+          if(d == reg_manager->StackPointer() || u == reg_manager->StackPointer()){
+            continue;
+          }
+          if(!live_graph_.moves->Contain(getNode(u), getNode(d))){
+            live_graph_.moves->Append(getNode(u), getNode(d));
           }
         }
       }
@@ -202,14 +204,17 @@ void LiveGraphFactory::InterfGraph() {
       if(typeid(*(node->NodeInfo())) == typeid(assem::OperInstr)){
         printf("node OperInstr assem is %s\n", ((assem::OperInstr*)(node->NodeInfo()))->assem_.c_str());
       }
-      if(out_->Look(node)){
-        if(!def){
-          printf("!def\n");
-          continue;
-        }
+      // if(out_->Look(node)){
+      //   if(!def){
+      //     printf("!def\n");
+      //     continue;
+      //   }
         for(auto d :def->GetList()){
           auto temp_list = out_->Look(node)->GetList();
           for(auto temp : temp_list){
+            if(d == reg_manager->StackPointer() || temp == reg_manager->StackPointer()){
+              continue;
+            }
             auto dst = getNode(d);
             auto out = getNode(temp);
             if(dst != out){
@@ -218,7 +223,7 @@ void LiveGraphFactory::InterfGraph() {
             }
           }
         }
-      }
+      // }
     }
   }
   printf("end interf graph\n");

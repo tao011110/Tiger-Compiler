@@ -14,14 +14,14 @@ void FlowGraphFactory::AssemFlowGraph() {
       flowgraph_->AddEdge(prev, cur);
     }
     if(typeid(*instr) == typeid(assem::OperInstr)){
-      if(((assem::OperInstr *)instr)->jumps_ != nullptr){
+      //TODO: some tricks?
+      if(((assem::OperInstr*)instr)->assem_.find("jmp")==0){
         prev = nullptr;
         continue;
       }
     }
     if(typeid(*instr) == typeid(assem::LabelInstr)){
       if(((assem::LabelInstr *)instr)->label_ != nullptr){
-        // printf("is label instr %s\n", ((assem::LabelInstr *)instr)->label_->Name().c_str());
         label_map_->Enter(((assem::LabelInstr *)instr)->label_, cur);
       }
     }
@@ -53,7 +53,7 @@ namespace assem {
 
 temp::TempList *LabelInstr::Def() const {
   /* TODO: Put your lab6 code here */
-  return nullptr;
+  return new temp::TempList();
 }
 
 temp::TempList *MoveInstr::Def() const {
@@ -62,7 +62,6 @@ temp::TempList *MoveInstr::Def() const {
   if(dst_){
     std::list<temp::Temp *> dst_list = dst_->GetList();
     for(auto tmp : dst_list){
-      // printf("def %d\n", tmp->Int());
       if(tmp == reg_manager->StackPointer()){
         continue;
       }
@@ -79,7 +78,6 @@ temp::TempList *OperInstr::Def() const {
   if(dst_){
     std::list<temp::Temp *> dst_list = dst_->GetList();
     for(auto tmp : dst_list){
-      // printf("def %d\n", tmp->Int());
       if(tmp == reg_manager->StackPointer()){
         continue;
       }
@@ -92,17 +90,15 @@ temp::TempList *OperInstr::Def() const {
 
 temp::TempList *LabelInstr::Use() const {
   /* TODO: Put your lab6 code here */
-  return nullptr;
+  return new temp::TempList();
 }
 
 temp::TempList *MoveInstr::Use() const {
   /* TODO: Put your lab6 code here */
   temp::TempList *result = new temp::TempList();
   std::list<temp::Temp *> src_list = src_->GetList();
-  // printf("use\n");
   if(src_){
     for(auto tmp : src_list){
-      // printf("use %d\n", tmp->Int());
       if(tmp == reg_manager->StackPointer()){
         continue;
       }
@@ -119,7 +115,6 @@ temp::TempList *OperInstr::Use() const {
   if(src_){
     std::list<temp::Temp *> src_list = src_->GetList();
     for(auto tmp : src_list){
-      // printf("use %d\n", tmp->Int());
       if(tmp == reg_manager->StackPointer()){
         continue;
       }
