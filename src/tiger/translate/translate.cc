@@ -462,8 +462,7 @@ tr::ExpAndTy *RecordExp::Translate(env::VEnvPtr venv, env::TEnvPtr tenv,
   int size = expList->GetList().size();
   tree::ExpList *exps = new tree::ExpList();
   exps->Append(new tree::ConstExp(size * reg_manager->WordSize()));
-  tree::Stm *stm = new tree::MoveStm(new tree::TempExp(reg), 
-    new tree::CallExp(new tree::NameExp(temp::LabelFactory::NamedLabel("alloc_record")), exps));
+  tree::Stm *stm = new tree::MoveStm(new tree::TempExp(reg), frame::externalCall(std::string("alloc_record"), exps));
   int count = 0;
   for(auto exp : expList->GetList()){
     stm = new tree::SeqStm(stm, new tree::MoveStm(

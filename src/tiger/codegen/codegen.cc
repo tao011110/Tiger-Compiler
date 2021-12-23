@@ -138,6 +138,8 @@ temp::Temp *BinopExp::Munch(assem::InstrList &instr_list, std::string_view fs) {
   temp::Temp* reg = temp::TempFactory::NewTemp();
   temp::Temp* left = left_->Munch(instr_list, fs);
   temp::Temp* right = right_->Munch(instr_list, fs);
+  temp::Temp *rdx = reg_manager->Registers()->NthTemp(3);
+  temp::Temp *rax = reg_manager->ReturnValue();
   switch(op_)
   {
     case tree::PLUS_OP:
@@ -160,8 +162,6 @@ temp::Temp *BinopExp::Munch(assem::InstrList &instr_list, std::string_view fs) {
     }
     case tree::MUL_OP:
     {
-      temp::Temp *rdx = reg_manager->Registers()->NthTemp(3);
-      temp::Temp *rax = reg_manager->ReturnValue();
       instr_list.Append(new assem::MoveInstr(std::string("movq `s0, `d0"), new temp::TempList(rax), new temp::TempList(left)));
       temp::TempList *dst = new temp::TempList(rax);
       dst->Append(rdx);
@@ -177,8 +177,6 @@ temp::Temp *BinopExp::Munch(assem::InstrList &instr_list, std::string_view fs) {
     }
     case tree::DIV_OP:
     {
-      temp::Temp* rdx = reg_manager->Registers()->NthTemp(3);
-      temp::Temp* rax = reg_manager->ReturnValue();
       instr_list.Append(new assem::MoveInstr(std::string("movq `s0, `d0"),new temp::TempList(rax),new temp::TempList(left)));
       temp::TempList *dst = new temp::TempList(rax);
       dst->Append(rdx);
@@ -209,6 +207,7 @@ temp::Temp *MemExp::Munch(assem::InstrList &instr_list, std::string_view fs) {
 
 temp::Temp *TempExp::Munch(assem::InstrList &instr_list, std::string_view fs) {
   /* TODO: Put your lab5 code here */
+  //notice the rsp
   if(temp_==reg_manager->FramePointer())
   {
     temp::Temp *reg = temp::TempFactory::NewTemp();
@@ -250,6 +249,8 @@ temp::Temp *CallExp::Munch(assem::InstrList &instr_list, std::string_view fs) {
   temp::Temp *ret = temp::TempFactory::NewTemp();
   temp::TempList *alloced_args = args_->MunchArgs(instr_list, fs);
   std::string instr_str = std::string("call ") + ((tree::NameExp*)fun_)->name_->Name();
+  int args_num = alloced_args->GetList().size();
+  int reg_num = reg_manager->ArgRegs()->GetList().size();
 
   // //save caller-saved regs
   // std::vector<temp::Temp *> tmp_store;
@@ -260,17 +261,16 @@ temp::Temp *CallExp::Munch(assem::InstrList &instr_list, std::string_view fs) {
   // }
 
   instr_list.Append(new assem::OperInstr(instr_str, reg_manager->CallerSaves(), alloced_args, nullptr));
-  instr_list.Append(new assem::MoveInstr(std::string("movq `s0, `d0"), 
-    new temp::TempList(ret), new temp::TempList(reg_manager->ReturnValue())));
 
-  int args_num = alloced_args->GetList().size();
-  int reg_num = reg_manager->ArgRegs()->GetList().size();
   // pop the args on the stack
   if(reg_num < args_num){
     std::string instr = std::string("addq $") + std::to_string((args_num - reg_num) * reg_manager->WordSize()) + std::string(", `d0");
     instr_list.Append(new assem::OperInstr(instr, new temp::TempList(reg_manager->StackPointer()), nullptr, nullptr));
   }
 
+  // parse the return value
+  instr_list.Append(new assem::MoveInstr(std::string("movq `s0, `d0"), 
+    new temp::TempList(ret), new temp::TempList(reg_manager->ReturnValue())));
 
   // // restore save caller-saved regs
   // int i = 0;
@@ -287,14 +287,13 @@ temp::TempList *ExpList::MunchArgs(assem::InstrList &instr_list, std::string_vie
   std::list<tree::Exp *> args_list = GetList();
   std::list<temp::Temp *> regs = reg_manager->ArgRegs()->GetList();
   temp::TempList *alloced_args = new temp::TempList();
-  temp::Temp *reg = temp::TempFactory::NewTemp();
+
   int regs_num = regs.size();
   int count = 0;
 
   for(auto arg:args_list)
   {
     temp::Temp *tmp = arg->Munch(instr_list, fs);
-    alloced_args->Append(tmp);
     if(count < regs_num){
       instr_list.Append(new assem::MoveInstr(std::string("movq `s0, `d0"), 
         new temp::TempList(reg_manager->ArgRegs()->NthTemp(count)), new temp::TempList(tmp)));
@@ -306,6 +305,8 @@ temp::TempList *ExpList::MunchArgs(assem::InstrList &instr_list, std::string_vie
         new temp::TempList(reg_manager->StackPointer()), new temp::TempList(tmp), nullptr));
     }
     count++;
+    // whether in the reg or in the frame
+    alloced_args->Append(tmp);
   }
   return alloced_args;
 }

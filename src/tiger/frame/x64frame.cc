@@ -66,11 +66,6 @@ class X64Frame : public Frame {
     return access;
   }
 
-
-  tree::Exp *externalCall(std::string s, tree::ExpList *args){
-    // printf("external %s\n", s.data());
-    return new tree::CallExp(new tree::NameExp(temp::LabelFactory::NamedLabel(s)), args);
-  }
   
   tree::Exp *getFramePtr(){
     return new tree::TempExp(reg_manager->FramePointer());
@@ -151,4 +146,10 @@ assem::Proc *procEntryExit3(frame::Frame *frame, assem::InstrList *body){
 
   return new assem::Proc(prolog, body, epilog);
 }
+
+tree::Exp *externalCall(std::string s, tree::ExpList *args){
+  printf("external %s\n", s.data());
+  return new tree::CallExp(new tree::NameExp(temp::LabelFactory::NamedLabel(s)), args);
+}
+
 } // namespace frame

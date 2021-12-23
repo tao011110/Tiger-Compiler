@@ -13,10 +13,6 @@ namespace ra {
 
     RegAllocator::RegAllocator(frame::Frame *frame, std::unique_ptr<cg::AssemInstr> assem_instr)
       : frame_(frame), assem_instr_(std::move(assem_instr)) {
-        // fg::FlowGraphFactory *flowGraph = new fg::FlowGraphFactory(assem_instr_.get()->GetInstrList());
-        // flowGraph->AssemFlowGraph();
-        // liveGraph = new live::LiveGraphFactory(flowGraph->GetFlowGraph());
-
         // init these
         printf("begin RegAllocator\n");
         precolored = new live::INodeList();
@@ -306,9 +302,7 @@ namespace ra {
         // printf("Coalesce\n");
         auto m = worklistMoves->GetList().begin();
         live::INodePtr x = (*m).first;
-        // printf("x is %d\n", x->NodeInfo()->Int());
         live::INodePtr y = (*m).second;
-        // printf("y is %d\n", y->NodeInfo()->Int());
         x = GetAlias(x);
         y = GetAlias(y);
         live::INodePtr u = nullptr;
@@ -497,7 +491,7 @@ namespace ra {
         auto n = list.end();
         while(n != list.begin()){
             n--;
-            printf("shssh\n");
+            printf("in selectStack\n");
             std::vector<temp::Temp*> okColors;
             int K = reg_manager->Registers()->GetList().size();
             for(int i = 0; i < K; i++){

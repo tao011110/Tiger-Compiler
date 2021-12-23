@@ -14,7 +14,6 @@ void FlowGraphFactory::AssemFlowGraph() {
       flowgraph_->AddEdge(prev, cur);
     }
     if(typeid(*instr) == typeid(assem::OperInstr)){
-      //TODO: some tricks?
       if(((assem::OperInstr*)instr)->assem_.find("jmp")==0){
         prev = nullptr;
         continue;

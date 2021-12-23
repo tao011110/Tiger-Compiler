@@ -87,7 +87,6 @@ class Frame {
   int offset;
 
   virtual Access *allocLocal(bool escape)  = 0;
-  virtual tree::Exp *externalCall(std::string s, tree::ExpList *args)  = 0;
   virtual tree::Exp *getFramePtr() = 0;
   virtual std::string GetLabel() = 0;
   Frame(){}
@@ -153,6 +152,8 @@ tree::Stm *procEntryExit1(frame::Frame *frame, tree::Stm *stm);
 assem::InstrList *procEntryExit2(assem::InstrList *body);
 
 assem::Proc *procEntryExit3(frame::Frame *frame, assem::InstrList *body);
+
+tree::Exp *externalCall(std::string s, tree::ExpList *args);
 
 } // namespace frame
 
