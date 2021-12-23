@@ -148,7 +148,7 @@ assem::Proc *procEntryExit3(frame::Frame *frame, assem::InstrList *body){
 }
 
 tree::Exp *externalCall(std::string s, tree::ExpList *args){
-  printf("external %s\n", s.data());
+  // printf("external %s\n", s.data());
   return new tree::CallExp(new tree::NameExp(temp::LabelFactory::NamedLabel(s)), args);
 }
 
